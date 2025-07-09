@@ -213,7 +213,7 @@
             dashboardContent: document.getElementById('dashboard-content'),
         };
         
-        // --- Functions (All functions are defined here) ---
+        // --- Functions ---
         
         function showMessage(message, isError = false) {
             allUI.messageText.textContent = message;
@@ -274,7 +274,7 @@
             allUI.detailContent.classList.remove('hidden');
             allUI.detailContent.innerHTML = `<p class="text-center text-gray-500">กำลังโหลดรายละเอียดผู้ป่วย...</p>`;
             try {
-                const patientRef = doc(db, `/artifacts/${appId}/public/data/patients`, patientId);
+                const patientRef = doc(db, "patients", patientId);
                 const patientSnap = await getDoc(patientRef);
                 if (!patientSnap.exists()) {
                     allUI.detailContent.innerHTML = `<p class="text-center text-red-500">ไม่พบข้อมูลผู้ป่วย</p>`;
@@ -310,7 +310,7 @@
                     <div id="visit-list" class="space-y-4"></div>`;
                 
                 if (visitsUnsubscribe) visitsUnsubscribe();
-                const visitsRef = collection(db, `/artifacts/${appId}/public/data/patients/${patientId}/visits`);
+                const visitsRef = collection(db, `patients/${patientId}/visits`);
                 visitsUnsubscribe = onSnapshot(query(visitsRef), (snapshot) => {
                     allVisitsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                     allVisitsData.sort((a, b) => new Date(b.visitDate) - new Date(a.visitDate));
