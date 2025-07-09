@@ -3,888 +3,495 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบติดตามผู้ป่วยโรคหืด</title>
+    <title>ระบบรายการยาโรงพยาบาล</title>
+    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Sarabun', sans-serif; }
-        .modal-backdrop { background-color: rgba(0,0,0,0.5); }
-        .modal { transition: opacity 0.3s ease; }
-        .nav-link { @apply px-4 py-2 text-gray-600 rounded-md hover:bg-blue-100 hover:text-blue-700 transition-colors; }
-        .nav-link.active { @apply bg-blue-600 text-white font-semibold; }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #555; }
-        details > summary { list-style: none; }
-        details > summary::-webkit-details-marker { display: none; }
+        /* Using a nice Google Font for Thai language */
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+        body {
+            font-family: 'Sarabun', sans-serif;
+        }
+        .sticky-header th { position: sticky; top: 0; z-index: 10; }
+        .modal { transition: opacity 0.25s ease; }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
 
-    <div id="main-app-view">
-        <header class="bg-white shadow-md p-4 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <i class="fas fa-clinic-medical text-3xl text-blue-600"></i>
-                <h1 class="text-2xl font-bold text-gray-800">Asthma Care Clinic</h1>
-            </div>
-            <nav id="main-nav" class="flex items-center gap-2">
-                <a href="#" id="nav-patients" class="nav-link active"><i class="fas fa-users mr-2"></i>จัดการผู้ป่วย</a>
-                <a href="#" id="nav-dashboard" class="nav-link"><i class="fas fa-chart-pie mr-2"></i>ภาพรวม</a>
-            </nav>
-        </header>
+    <!-- =================================================================== -->
+    <!-- 1. Public Page (หน้าสำหรับผู้ใช้ทั่วไป)                           -->
+    <!-- =================================================================== -->
+    <div id="public-page">
+        <div class="container mx-auto p-4 sm:p-6 md:p-8">
+            <header class="text-center mb-6">
+                <h1 class="text-3xl sm:text-4xl font-bold text-blue-600">รายการยาในโรงพยาบาล</h1>
+                <p class="text-gray-500 mt-2">ค้นหารายการยาและตรวจสอบจำนวนสูงสุดที่สามารถสั่งได้</p>
+            </header>
 
-        <main id="main-content" class="h-[calc(100vh-76px)]">
-            <div id="patient-management-view" class="flex h-full">
-                <div class="w-1/3 bg-white border-r border-gray-200 flex flex-col">
-                    <div class="p-4"><button id="openAddPatientModalBtn" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300 flex items-center justify-center"><i class="fas fa-user-plus mr-2"></i>เพิ่มผู้ป่วยใหม่</button></div>
-                    <div class="p-4 border-t border-b border-gray-200"><div class="relative"><span class="absolute inset-y-0 left-0 flex items-center pl-3"><i class="fas fa-search text-gray-400"></i></span><input type="text" id="searchInput" placeholder="ค้นหาด้วยชื่อ หรือ HN..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></div></div>
-                    <div id="patientList" class="overflow-y-auto flex-grow"><p id="patient-loading" class="p-4 text-gray-500">กำลังโหลดข้อมูลผู้ป่วย...</p></div>
-                </div>
-                <div class="w-2/3 flex flex-col bg-gray-50">
-                    <div id="patientDetailView" class="flex-grow p-6 overflow-y-auto">
-                        <div id="empty-state" class="flex flex-col items-center justify-center h-full text-gray-500"><i class="fas fa-inhaler fa-4x mb-4 text-gray-400"></i><h2 class="text-2xl font-semibold">กรุณาเลือกผู้ป่วย</h2><p>เลือกผู้ป่วยจากรายการด้านซ้ายเพื่อดูรายละเอียด</p></div>
-                        <div id="detail-content" class="hidden"></div>
-                    </div>
+            <div class="flex justify-between items-center mb-6">
+                <input type="text" id="publicSearchInput" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="ค้นหาด้วยชื่อสามัญ, ชื่อการค้า, หรือรหัสยา...">
+                <button id="goToLoginBtn" class="ml-4 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-lg whitespace-nowrap">สำหรับเจ้าหน้าที่</button>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-200 sticky-header">
+                            <tr>
+                                <th class="p-4 font-bold text-gray-600">รหัสยา</th>
+                                <th class="p-4 font-bold text-gray-600">ชื่อสามัญ</th>
+                                <th class="p-4 font-bold text-gray-600">ชื่อการค้า</th>
+                                <th class="p-4 font-bold text-gray-600">รูปแบบยา</th>
+                                <th class="p-4 font-bold text-gray-600 text-center">จำนวนสูงสุด</th>
+                            </tr>
+                        </thead>
+                        <tbody id="publicTableBody"></tbody>
+                    </table>
                 </div>
             </div>
-            <div id="dashboard-view" class="p-8 overflow-y-auto h-full hidden">
-                <h2 class="text-3xl font-bold text-gray-800 mb-6">ภาพรวมคลินิก (Dashboard)</h2>
-                <div id="dashboard-loading" class="text-center text-gray-500"><i class="fas fa-spinner fa-spin fa-2x"></i><p class="mt-2">กำลังคำนวณข้อมูล...</p></div>
-                <div id="dashboard-content" class="hidden">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                        <div class="bg-white p-6 rounded-lg shadow-md text-center"><i class="fas fa-users text-4xl text-blue-500 mb-3"></i><h3 class="text-lg font-semibold text-gray-600">จำนวนผู้ป่วยทั้งหมด</h3><p id="total-patients" class="text-4xl font-bold text-gray-800">0</p></div>
-                        <div class="bg-white p-6 rounded-lg shadow-md text-center"><i id="appointment-icon" class="fas fa-calendar-check text-4xl text-green-500 mb-3"></i><h3 id="appointment-title" class="text-lg font-semibold text-gray-600">นัดหมายวันนี้</h3><p id="appointment-info" class="text-4xl font-bold text-gray-800">0</p></div>
-                    </div>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-xl font-bold text-gray-700 mb-4">อัตราการควบคุมโรค (จากการติดตามล่าสุด)</h3><div class="w-full h-64 flex items-center justify-center"><canvas id="controlRateChart"></canvas></div></div>
-                        <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-xl font-bold text-gray-700 mb-4">สัดส่วนผู้ป่วยที่ได้รับยา ICS (จากการติดตามล่าสุด)</h3><div class="w-full h-64 flex items-center justify-center"><canvas id="icsRateChart"></canvas></div></div>
-                    </div>
-                </div>
-            </div>
-        </main>
+        </div>
     </div>
 
-    <!-- Modals -->
-    <div id="patientModal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-md m-4 modal">
-            <div class="p-4 border-b flex justify-between items-center"><h2 id="patientModalTitle" class="text-lg font-bold text-gray-700">เพิ่มข้อมูลผู้ป่วยใหม่</h2><button id="closePatientModal" class="text-gray-500 hover:text-gray-800">&times;</button></div>
-            <div class="p-6">
-                <form id="patientForm">
-                    <input type="hidden" id="patientId">
-                    <div class="mb-4"><label for="hn" class="block text-sm font-medium text-gray-700 mb-1">HN</label><input type="text" id="hn" required class="w-full px-3 py-2 border border-gray-300 rounded-md"></div>
-                    <div class="mb-4"><label for="name" class="block text-sm font-medium text-gray-700 mb-1">ชื่อ-สกุล</label><input type="text" id="name" required class="w-full px-3 py-2 border border-gray-300 rounded-md"></div>
-                    <div class="mb-4"><label for="birthDate" class="block text-sm font-medium text-gray-700 mb-1">วันเกิด</label><input type="date" id="birthDate" required class="w-full px-3 py-2 border border-gray-300 rounded-md"></div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="mb-4"><label for="height" class="block text-sm font-medium text-gray-700 mb-1">ส่วนสูง (ซม.)</label><input type="number" id="height" required class="w-full px-3 py-2 border border-gray-300 rounded-md"></div>
-                        <div class="mb-4"><label for="gender" class="block text-sm font-medium text-gray-700 mb-1">เพศ</label><select id="gender" required class="w-full px-3 py-2 border border-gray-300 rounded-md"><option value="ชาย">ชาย</option><option value="หญิง">หญิง</option></select></div>
+    <!-- =================================================================== -->
+    <!-- 2. Login Page (หน้าล็อกอิน)                                       -->
+    <!-- =================================================================== -->
+    <div id="login-page" class="hidden">
+        <div class="min-h-screen flex items-center justify-center">
+            <div class="w-full max-w-sm p-8 space-y-6 bg-white rounded-lg shadow-lg">
+                <h2 class="text-2xl font-bold text-center text-gray-800">เข้าสู่ระบบผู้ดูแล</h2>
+                <div>
+                    <label for="passwordInput" class="text-sm font-medium text-gray-700">รหัสผ่าน</label>
+                    <input type="password" id="passwordInput" class="w-full px-3 py-2 mt-1 text-gray-700 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••••">
+                    <p id="passwordError" class="text-red-500 text-sm mt-1 h-4"></p>
+                </div>
+                <div class="flex gap-4">
+                    <button id="cancelLoginBtn" class="w-full px-4 py-2 text-base font-medium text-gray-800 bg-gray-200 rounded-md shadow-sm hover:bg-gray-300">กลับหน้าหลัก</button>
+                    <button id="submitPasswordBtn" class="w-full px-4 py-2 text-base font-medium text-white bg-blue-600 rounded-md shadow-sm hover:bg-blue-700">เข้าสู่ระบบ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- 3. Admin Dashboard Page (หน้าแดชบอร์ดผู้ดูแล)                     -->
+    <!-- =================================================================== -->
+    <div id="admin-page" class="hidden">
+        <div class="container mx-auto p-4 sm:p-6 md:p-8">
+            <header class="flex flex-wrap justify-between items-center mb-6 gap-4">
+                <div>
+                    <h1 class="text-3xl sm:text-4xl font-bold text-green-600">แดชบอร์ดผู้ดูแลระบบ</h1>
+                    <p class="text-gray-500 mt-2">จัดการข้อมูลยา (เพิ่ม, ลบ, แก้ไข)</p>
+                </div>
+                <div class="flex gap-2">
+                    <button id="changePasswordBtn" class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white font-bold rounded-lg">เปลี่ยนรหัสผ่าน</button>
+                    <button id="logoutBtn" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-bold rounded-lg">ออกจากระบบ</button>
+                </div>
+            </header>
+
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                <input type="text" id="adminSearchInput" class="w-full sm:w-2/3 p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="ค้นหาข้อมูลยา...">
+                <button id="addDrugBtn" class="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-5 rounded-lg">เพิ่มยาใหม่</button>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-200 sticky-header">
+                            <tr>
+                                <th class="p-4 font-bold text-gray-600">รหัสยา</th>
+                                <th class="p-4 font-bold text-gray-600">ชื่อสามัญ</th>
+                                <th class="p-4 font-bold text-gray-600">ชื่อการค้า</th>
+                                <th class="p-4 font-bold text-gray-600">รูปแบบยา</th>
+                                <th class="p-4 font-bold text-gray-600 text-center">จำนวนสูงสุด</th>
+                                <th class="p-4 font-bold text-gray-600 text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Modal (ใช้ร่วมกัน) -->
+    <div id="drugModal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 h-full w-full flex items-center justify-center hidden">
+      <div class="relative mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
+        <div class="mt-3 text-center">
+          <h3 id="modalTitle" class="text-lg leading-6 font-medium text-gray-900"></h3>
+          <form id="drugForm" class="mt-2 px-7 py-3">
+              <input type="text" id="genericName" placeholder="ชื่อสามัญ" class="mb-3 mt-2 px-3 py-2 text-gray-700 bg-gray-100 rounded text-sm focus:outline-none w-full" required>
+              <input type="text" id="tradeName" placeholder="ชื่อการค้า" class="mb-3 px-3 py-2 text-gray-700 bg-gray-100 rounded text-sm focus:outline-none w-full">
+              
+              <!-- *** UPDATED: Drug Form Dropdown *** -->
+              <div class="mb-3">
+                  <label for="formSelect" class="block text-sm font-medium text-gray-700 text-left mb-1">รูปแบบยา</label>
+                  <select id="formSelect" class="w-full px-3 py-2 text-gray-700 bg-gray-100 rounded text-sm focus:outline-none" required></select>
+              </div>
+              <div id="newFormContainer" class="hidden mb-3">
+                  <input type="text" id="newFormInput" placeholder="ระบุรูปแบบยาใหม่..." class="w-full px-3 py-2 text-gray-700 bg-gray-100 rounded text-sm focus:outline-none">
+              </div>
+
+              <input type="number" id="max" placeholder="จำนวนสูงสุดที่สั่งได้" class="mb-3 px-3 py-2 text-gray-700 bg-gray-100 rounded text-sm focus:outline-none w-full disabled:bg-gray-200" required>
+              
+              <div class="flex items-center justify-end mb-4 -mt-1">
+                <label for="unlimitedCheckbox" class="text-sm text-gray-700 mr-2">ไม่จำกัด</label>
+                <input type="checkbox" id="unlimitedCheckbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+              </div>
+
+              <div class="items-center px-4 py-3"><button id="saveBtn" type="submit" class="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-600">บันทึก</button></div>
+          </form>
+          <button id="closeDrugModalBtn" class="absolute top-0 right-0 mt-4 mr-4 text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 h-full w-full flex items-center justify-center hidden">
+        <div class="relative mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 text-center">เปลี่ยนรหัสผ่านผู้ดูแล</h3>
+                <form id="changePasswordForm" class="space-y-4 mt-4 px-7 py-3">
+                    <div>
+                        <label for="oldPassword" class="block text-sm font-medium text-gray-700 text-left">รหัสผ่านเก่า</label>
+                        <input type="password" id="oldPassword" class="w-full px-3 py-2 mt-1 text-gray-700 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500" required>
                     </div>
-                    <div class="flex justify-end"><button type="submit" id="savePatientBtn" class="bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700">บันทึก</button></div>
+                    <div>
+                        <label for="newPassword" class="block text-sm font-medium text-gray-700 text-left">รหัสผ่านใหม่</label>
+                        <input type="password" id="newPassword" class="w-full px-3 py-2 mt-1 text-gray-700 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500" required>
+                    </div>
+                    <div>
+                        <label for="confirmNewPassword" class="block text-sm font-medium text-gray-700 text-left">ยืนยันรหัสผ่านใหม่</label>
+                        <input type="password" id="confirmNewPassword" class="w-full px-3 py-2 mt-1 text-gray-700 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500" required>
+                    </div>
+                    <div class="items-center px-4 py-3">
+                        <button type="submit" class="w-full px-4 py-2 text-base font-medium text-white bg-yellow-500 rounded-md shadow-sm hover:bg-yellow-600">ยืนยันการเปลี่ยนรหัสผ่าน</button>
+                    </div>
                 </form>
+                 <button id="closeChangePasswordModalBtn" class="absolute top-0 right-0 mt-4 mr-4 text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
             </div>
         </div>
     </div>
-    <div id="addVisitModal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl m-4 modal">
-            <div class="p-4 border-b flex justify-between items-center"><h2 id="visitModalTitle" class="text-lg font-bold text-gray-700">บันทึกการติดตาม</h2><button id="closeVisitModal" class="text-gray-500 hover:text-gray-800">&times;</button></div>
-            <div class="p-6 max-h-[80vh] overflow-y-auto">
-                <form id="addVisitForm">
-                    <input type="hidden" id="visitId">
-                    <div class="mb-6 p-4 border border-purple-200 rounded-lg bg-purple-50">
-                        <details open><summary class="text-lg font-semibold text-purple-800 cursor-pointer flex justify-between items-center"><div><i class="fas fa-clipboard-question mr-2"></i><span>แบบประเมิน EAC</span></div><div class="text-right"><span class="text-base font-bold">คะแนน: <span id="eacScoreDisplay" class="text-xl">0</span> / 8</span><div id="eacInterpretationDisplay" class="text-sm font-semibold mt-1">&nbsp;</div></div></summary>
-                            <div id="eacQuestionsContainer" class="mt-4 space-y-4 pt-4 border-t">
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center"><label class="block text-sm">1. อาการกลางวัน (4 สัปดาห์)</label><select id="eacQ1" class="eac-question w-full p-2 border rounded-md"><option value="0" selected>ไม่มีเลย</option><option value="1">&lt; 1 ครั้ง/สัปดาห์</option><option value="2">&ge; 1 ครั้ง/สัปดาห์</option></select></div>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center"><label class="block text-sm">2. อาการกลางคืน (4 สัปดาห์)</label><select id="eacQ2" class="eac-question w-full p-2 border rounded-md"><option value="0" selected>ไม่มีเลย</option><option value="1">&le; 2 ครั้ง/เดือน</option><option value="2">&gt; 2 ครั้ง/เดือน</option></select></div>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center"><label class="block text-sm">3. การใช้ยาพ่นฉุกเฉิน (4 สัปดาห์)</label><select id="eacQ3" class="eac-question w-full p-2 border rounded-md"><option value="0" selected>ไม่ได้ใช้เลย</option><option value="1">&lt; 1 ครั้ง/สัปดาห์</option><option value="2">ใช้เกือบทุกวัน/ทุกวัน</option></select></div>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center"><label class="block text-sm">4. ไปห้องฉุกเฉิน (4 สัปดาห์)</label><select id="eacQ4" class="eac-question w-full p-2 border rounded-md"><option value="0" selected>ไม่เคย</option><option value="1">เคย</option></select></div>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center"><label class="block text-sm">5. นอนโรงพยาบาล (4 สัปดาห์)</label><select id="eacQ5" class="eac-question w-full p-2 border rounded-md"><option value="0" selected>ไม่เคย</option><option value="1">เคย</option></select></div>
-                            </div>
-                        </details>
-                    </div>
-                    <div class="mb-6 p-4 border border-blue-200 rounded-lg bg-blue-50">
-                        <h3 class="text-lg font-semibold text-blue-800 mb-3"><i class="fas fa-wind mr-2"></i>PEFR</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div><label for="actualPEFR" class="block text-sm">PEFR ที่วัดได้ (L/min)</label><input type="number" id="actualPEFR" class="w-full p-2 border rounded-md"></div>
-                            <div><label class="block text-sm">PEFR มาตรฐาน</label><input type="text" id="predictedPEFR" readonly class="w-full p-2 bg-gray-200 border rounded-md"></div>
-                            <div><label class="block text-sm">% เทียบกับค่ามาตรฐาน</label><input type="text" id="percentPredictedPEFR" readonly class="w-full p-2 bg-gray-200 border rounded-md"></div>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <div class="mb-4"><label for="visitDate" class="block text-sm">วันที่ติดตาม</label><input type="date" id="visitDate" required class="w-full p-2 border rounded-md"></div>
-                            <div class="mb-4"><label class="block text-sm">ระดับการควบคุมโรค (ประเมิน)</label><select id="controlLevel" required class="w-full p-2 border rounded-md"><option value="ควบคุมได้ดี">ควบคุมได้ดี</option><option value="ควบคุมได้บางส่วน">ควบคุมได้บางส่วน</option><option value="ควบคุมไม่ได้">ควบคุมไม่ได้</option></select></div>
-                            <div class="mb-4"><label class="block text-sm">Adherence</label><select id="adherence" required class="w-full p-2 border rounded-md"><option value="ดี">ดี</option><option value="ปานกลาง">ปานกลาง</option><option value="ต้องปรับปรุง">ต้องปรับปรุง</option></select></div>
-                            <div class="mb-4"><label class="block text-sm">เทคนิคการใช้ยา</label><select id="inhalerTechnique" required class="w-full p-2 border rounded-md"><option value="ถูกต้อง">ถูกต้อง</option><option value="ต้องแก้ไข">ต้องแก้ไข</option></select></div>
-                        </div>
-                        <div>
-                            <div class="mb-4"><label for="techniqueNotes" class="block text-sm">บันทึกเทคนิคการใช้ยา</label><textarea id="techniqueNotes" rows="2" class="w-full p-2 border rounded-md"></textarea></div>
-                            <div class="mb-4"><label for="medications" class="block text-sm">รายการยา</label><textarea id="medications" rows="3" required class="w-full p-2 border rounded-md"></textarea></div>
-                            <div class="mb-2"><label class="flex items-center"><input type="checkbox" id="isIcsPrescribed" class="h-4 w-4"><span class="ml-2 text-sm">มีการสั่งใช้ยา ICS</span></label></div>
-                            <div class="mb-4"><label for="sideEffects" class="block text-sm">อาการไม่พึงประสงค์</label><textarea id="sideEffects" rows="2" class="w-full p-2 border rounded-md"></textarea></div>
-                            <div class="mb-4"><label for="counselingNotes" class="block text-sm">ประเด็นที่ให้คำแนะนำ</label><textarea id="counselingNotes" rows="3" class="w-full p-2 border rounded-md"></textarea></div>
-                        </div>
-                    </div>
-                     <div class="mt-4 border-t pt-4"><label for="nextAppointmentDate" class="block text-sm">วันนัดครั้งถัดไป (ถ้ามี)</label><input type="date" id="nextAppointmentDate" class="w-full md:w-1/2 p-2 border rounded-md"></div>
-                    <div class="flex justify-end mt-6"><button type="submit" id="saveVisitBtn" class="bg-green-600 text-white py-2 px-6 rounded-lg hover:bg-green-700">บันทึก</button></div>
-                </form>
-            </div>
-        </div>
-    </div>
-    <div id="confirmModal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-sm m-4 modal">
-            <div class="p-6 text-center">
-                <div class="flex justify-center mb-4"><i class="fas fa-exclamation-triangle text-5xl text-red-500"></i></div>
-                <h3 class="text-lg font-semibold text-gray-800 mb-2">ยืนยันการลบ</h3>
-                <p id="confirmModalText" class="text-sm text-gray-600 mb-6">คุณแน่ใจหรือไม่?</p>
-                <div class="flex justify-center gap-4"><button id="cancelBtn" class="py-2 px-6 bg-gray-200 rounded-lg hover:bg-gray-300">ยกเลิก</button><button id="confirmBtn" class="py-2 px-6 bg-red-600 text-white rounded-lg hover:bg-red-700">ยืนยัน</button></div>
-            </div>
-        </div>
-    </div>
-    <div id="messageBox" class="fixed top-5 right-5 bg-green-500 text-white py-3 px-5 rounded-lg shadow-lg z-50 hidden transition-opacity duration-300"><p id="messageText"></p></div>
 
-    <script type="module">
-        // Firebase Imports
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, addDoc, onSnapshot, query, getDocs, deleteDoc, updateDoc, getDoc, limit, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- Firebase Configuration ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyB1XOiJkKuBp7TG7NKY6JpREh6vLtjp1Q8",
-            authDomain: "asthma-clinic-app.firebaseapp.com",
-            projectId: "asthma-clinic-app",
-            storageBucket: "asthma-clinic-app.firebasestorage.app",
-            messagingSenderId: "335260968331",
-            appId: "1:335260968331:web:6ff4f68cf5b495bed3bb8e",
-            measurementId: "G-9QR9E98BXT"
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        let medicineData = [
+            { id: '1001', generic: 'Paracetamol', trade: 'Tylenol', form: 'เม็ด (Tablet)', max: 200 },
+            { id: '1002', generic: 'Ibuprofen', trade: 'Brufen', form: 'เม็ด (Tablet)', max: 150 },
+            { id: '1003', generic: 'Amoxicillin', trade: 'Amoxil', form: 'แคปซูล (Capsule)', max: null },
+            { id: '1004', generic: 'Salbutamol', trade: 'Ventolin', form: 'ยาพ่น (Inhaler)', max: 2 },
+        ];
+        let drugForms = [
+            'เม็ด (Tablet)',
+            'แคปซูล (Capsule)',
+            'ยาพ่น (Inhaler)',
+            'ยาน้ำ (Syrup)',
+            'ยาฉีด (Injection)'
+        ];
+        let ADMIN_PASSWORD = 'admin1234';
+        let currentEditId = null;
+
+        // Page elements
+        const publicPage = document.getElementById('public-page');
+        const loginPage = document.getElementById('login-page');
+        const adminPage = document.getElementById('admin-page');
+        
+        // Public page elements
+        const publicTableBody = document.getElementById('publicTableBody');
+        const publicSearchInput = document.getElementById('publicSearchInput');
+        const goToLoginBtn = document.getElementById('goToLoginBtn');
+
+        // Login page elements
+        const passwordInput = document.getElementById('passwordInput');
+        const passwordError = document.getElementById('passwordError');
+        const cancelLoginBtn = document.getElementById('cancelLoginBtn');
+        const submitPasswordBtn = document.getElementById('submitPasswordBtn');
+
+        // Admin page elements
+        const adminTableBody = document.getElementById('adminTableBody');
+        const adminSearchInput = document.getElementById('adminSearchInput');
+        const addDrugBtn = document.getElementById('addDrugBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const changePasswordBtn = document.getElementById('changePasswordBtn');
+
+        // Drug Modal elements
+        const drugModal = document.getElementById('drugModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const drugForm = document.getElementById('drugForm');
+        const closeDrugModalBtn = document.getElementById('closeDrugModalBtn');
+        const maxInput = document.getElementById('max');
+        const unlimitedCheckbox = document.getElementById('unlimitedCheckbox');
+        const formSelect = document.getElementById('formSelect');
+        const newFormContainer = document.getElementById('newFormContainer');
+        const newFormInput = document.getElementById('newFormInput');
+
+        // Change Password Modal elements
+        const changePasswordModal = document.getElementById('changePasswordModal');
+        const changePasswordForm = document.getElementById('changePasswordForm');
+        const closeChangePasswordModalBtn = document.getElementById('closeChangePasswordModalBtn');
+        const oldPasswordInput = document.getElementById('oldPassword');
+        const newPasswordInput = document.getElementById('newPassword');
+        const confirmNewPasswordInput = document.getElementById('confirmNewPassword');
+
+        // --- Page Navigation ---
+        const showPage = (pageId) => {
+            publicPage.classList.add('hidden');
+            loginPage.classList.add('hidden');
+            adminPage.classList.add('hidden');
+            document.getElementById(pageId).classList.remove('hidden');
         };
-        
-        const appId = firebaseConfig.projectId;
 
-        // --- Global State & UI Elements ---
-        let app, auth, db;
-        let userId = null;
-        let currentPatientId = null;
-        let currentPatientData = null; 
-        let visitsUnsubscribe = null;
-        let patientsUnsubscribe = null;
-        let allPatientsData = [];
-        let allVisitsData = []; 
-        let confirmCallback = null;
-        let pefrChartInstance = null;
-        let controlRateChartInstance = null;
-        let icsRateChartInstance = null;
-        const allUI = {
-            mainAppView: document.getElementById('main-app-view'),
-            navPatients: document.getElementById('nav-patients'),
-            navDashboard: document.getElementById('nav-dashboard'),
-            patientManagementView: document.getElementById('patient-management-view'),
-            dashboardView: document.getElementById('dashboard-view'),
-            openAddPatientModalBtn: document.getElementById('openAddPatientModalBtn'),
-            patientModal: document.getElementById('patientModal'),
-            closePatientModal: document.getElementById('closePatientModal'),
-            patientForm: document.getElementById('patientForm'),
-            patientModalTitle: document.getElementById('patientModalTitle'),
-            addVisitModal: document.getElementById('addVisitModal'),
-            closeVisitModal: document.getElementById('closeVisitModal'),
-            addVisitForm: document.getElementById('addVisitForm'),
-            visitModalTitle: document.getElementById('visitModalTitle'),
-            patientList: document.getElementById('patientList'),
-            patientDetailView: document.getElementById('patientDetailView'),
-            emptyState: document.getElementById('empty-state'),
-            detailContent: document.getElementById('detail-content'),
-            patientLoading: document.getElementById('patient-loading'),
-            messageBox: document.getElementById('messageBox'),
-            messageText: document.getElementById('messageText'),
-            searchInput: document.getElementById('searchInput'),
-            confirmModal: document.getElementById('confirmModal'),
-            confirmModalText: document.getElementById('confirmModalText'),
-            confirmBtn: document.getElementById('confirmBtn'),
-            cancelBtn: document.getElementById('cancelBtn'),
-            eacQuestionsContainer: document.getElementById('eacQuestionsContainer'),
-            eacScoreDisplay: document.getElementById('eacScoreDisplay'),
-            eacInterpretationDisplay: document.getElementById('eacInterpretationDisplay'),
-            actualPEFRInput: document.getElementById('actualPEFR'),
-            predictedPEFROutput: document.getElementById('predictedPEFR'),
-            percentPredictedPEFROutput: document.getElementById('percentPredictedPEFR'),
-            dashboardLoading: document.getElementById('dashboard-loading'),
-            dashboardContent: document.getElementById('dashboard-content'),
-        };
-        
-        // --- Functions ---
-        
-        function showMessage(message, isError = false) {
-            allUI.messageText.textContent = message;
-            allUI.messageBox.classList.remove('hidden', 'bg-green-500', 'bg-red-500');
-            allUI.messageBox.classList.add(isError ? 'bg-red-500' : 'bg-green-500');
-            setTimeout(() => { allUI.messageBox.classList.add('hidden'); }, 3000);
-        }
-
-        function showConfirmModal(message, onConfirm) {
-            allUI.confirmModalText.textContent = message;
-            confirmCallback = onConfirm;
-            allUI.confirmModal.classList.remove('hidden');
-            allUI.confirmModal.classList.add('flex');
-        }
-
-        function calculateAge(birthDateString) {
-            if (!birthDateString) return null;
-            const birthDate = new Date(birthDateString);
-            const today = new Date();
-            let age = today.getFullYear() - birthDate.getFullYear();
-            const m = today.getMonth() - birthDate.getMonth();
-            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-                age--;
-            }
-            return age;
-        }
-        
-        function renderPatientList(patients) {
-            allUI.patientLoading.classList.add('hidden');
-            if (patients.length === 0) {
-                allUI.patientList.innerHTML = `<p class="p-4 text-center text-gray-500">ไม่พบผู้ป่วย</p>`;
-                return;
-            }
-            allUI.patientList.innerHTML = patients.map(patient => `
-                <div class="patient-item-container flex items-center justify-between p-4 border-b hover:bg-blue-50 transition group">
-                    <div class="patient-item-info cursor-pointer flex-grow">
-                        <h3 class="font-bold text-gray-800">${patient.name}</h3>
-                        <p class="text-sm text-gray-600">HN: ${patient.hn}</p>
-                    </div>
-                    <button class="delete-patient-btn text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity p-2" data-id="${patient.id}" data-name="${patient.name}" title="ลบผู้ป่วย">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                </div>
-            `).join('');
-        }
-        
-        function filterAndRenderPatients() {
-            const searchTerm = allUI.searchInput.value.toLowerCase().trim();
-            const filteredPatients = !searchTerm ? allPatientsData : allPatientsData.filter(p => 
-                p.name.toLowerCase().includes(searchTerm) || p.hn.toLowerCase().includes(searchTerm)
+        // --- Rendering Functions ---
+        const renderPublicTable = () => {
+            const searchTerm = publicSearchInput.value.toLowerCase().trim();
+            const filteredData = medicineData.filter(med => 
+                med.generic.toLowerCase().includes(searchTerm) ||
+                med.trade.toLowerCase().includes(searchTerm) ||
+                med.id.includes(searchTerm)
             );
-            renderPatientList(filteredPatients);
-        }
-
-        async function showPatientDetails(patientId) {
-            if (!db || !userId) return;
-            allUI.emptyState.classList.add('hidden');
-            allUI.detailContent.classList.remove('hidden');
-            allUI.detailContent.innerHTML = `<p class="text-center text-gray-500">กำลังโหลดรายละเอียดผู้ป่วย...</p>`;
-            try {
-                const patientRef = doc(db, "patients", patientId);
-                const patientSnap = await getDoc(patientRef);
-                if (!patientSnap.exists()) {
-                    allUI.detailContent.innerHTML = `<p class="text-center text-red-500">ไม่พบข้อมูลผู้ป่วย</p>`;
-                    return;
-                }
-                currentPatientData = patientSnap.data();
-                currentPatientData.id = patientId;
-                
-                const displayAge = calculateAge(currentPatientData.birthDate);
-
-                allUI.detailContent.innerHTML = `
-                    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-                        <div class="flex justify-between items-start flex-wrap gap-4">
-                             <div>
-                                <div class="flex items-center gap-4">
-                                    <h2 class="text-2xl font-bold text-blue-800">${currentPatientData.name}</h2>
-                                    <button id="openEditPatientModalBtn" class="text-blue-600 hover:text-blue-800 text-sm"><i class="fas fa-user-edit"></i> แก้ไขข้อมูล</button>
-                                </div>
-                                <p class="text-gray-600 mt-1">HN: ${currentPatientData.hn} | อายุ: ${displayAge ?? 'N/A'} ปี | เพศ: ${currentPatientData.gender} | สูง: ${currentPatientData.height || 'N/A'} ซม.</p>
-                            </div>
-                            <div class="flex gap-2">
-                                <button id="openAddVisitModalBtn" class="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition flex items-center">
-                                    <i class="fas fa-plus-circle mr-2"></i>เพิ่มการติดตาม
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-                         <h3 class="text-xl font-bold mb-4 text-gray-700">แนวโน้มค่า PEFR</h3>
-                         <canvas id="pefrChart"></canvas>
-                    </div>
-                    <h3 class="text-xl font-bold mb-4 text-gray-700">ประวัติการติดตาม (Follow-up History)</h3>
-                    <div id="visit-list" class="space-y-4"></div>`;
-                
-                if (visitsUnsubscribe) visitsUnsubscribe();
-                const visitsRef = collection(db, `patients/${patientId}/visits`);
-                visitsUnsubscribe = onSnapshot(query(visitsRef), (snapshot) => {
-                    allVisitsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                    allVisitsData.sort((a, b) => new Date(b.visitDate) - new Date(a.visitDate));
-                    renderVisitList(allVisitsData);
-                    renderPefrChart(allVisitsData, currentPatientData);
-                });
-            } catch (error) {
-                console.error("Error fetching patient details:", error);
-                allUI.detailContent.innerHTML = `<p class="text-center text-red-500">เกิดข้อผิดพลาด</p>`;
-                showMessage("เกิดข้อผิดพลาดในการโหลดข้อมูล", true);
-            }
-        }
-        
-        function renderVisitList(visits) {
-            const visitListEl = document.getElementById('visit-list');
-            if (!visitListEl) return;
-            if (visits.length === 0) {
-                visitListEl.innerHTML = `<div class="bg-white p-6 rounded-lg text-center text-gray-500"><i class="fas fa-file-alt fa-2x mb-2 text-gray-400"></i><p>ยังไม่มีประวัติการติดตาม</p></div>`;
-                return;
-            }
-            
-            const getEacInterpretationBadge = (interpretation) => {
-                if (!interpretation) return '';
-                const styles = {
-                    'ควบคุมโรคได้ดี': 'bg-green-100 text-green-800',
-                    'ควบคุมโรคได้บางส่วน': 'bg-yellow-100 text-yellow-800',
-                    'ควบคุมโรคไม่ได้': 'bg-red-100 text-red-800'
-                };
-                return `<span class="text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full ${styles[interpretation] || ''}">${interpretation}</span>`;
-            };
-            const getTechniqueIcon = (tech) => tech === 'ถูกต้อง' ? `<i class="fas fa-check-circle text-green-500"></i>` : `<i class="fas fa-exclamation-triangle text-yellow-500"></i>`;
-            
-            visitListEl.innerHTML = visits.map(visit => `
-                <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
-                    <div class="flex justify-between items-center mb-3">
-                        <p class="font-bold text-lg text-gray-700">วันที่: ${new Date(visit.visitDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                        <div class="flex items-center">
-                            ${visit.eacScore != null ? `<span class="font-bold text-purple-700 mr-3">EAC: ${visit.eacScore}</span>` : ''}
-                            ${getEacInterpretationBadge(visit.eacInterpretation)}
-                            <button class="edit-visit-btn text-gray-500 hover:text-blue-600 ml-3 px-2" data-visit-id="${visit.id}" title="แก้ไขการติดตาม"><i class="fas fa-edit"></i></button>
-                            <button class="delete-visit-btn text-gray-500 hover:text-red-600 px-2" data-visit-id="${visit.id}" data-visit-date="${visit.visitDate}" title="ลบการติดตาม"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </div>
-                    ${visit.actualPEFR ? `<div class="mb-3 text-sm"><p class="font-semibold text-gray-600">PEFR: ${visit.actualPEFR} L/min (${visit.percentPredictedPEFR || 'N/A'}%)</p></div>` : ''}
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                        <div><p class="font-semibold text-gray-600">เทคนิคการใช้ยา: ${getTechniqueIcon(visit.inhalerTechnique)} ${visit.inhalerTechnique}</p>${visit.techniqueNotes ? `<p class="text-gray-500 pl-4">- ${visit.techniqueNotes}</p>` : ''}</div>
-                        <div><p class="font-semibold text-gray-600">Adherence: ${visit.adherence}</p></div>
-                        <div class="col-span-1 md:col-span-2"><p class="font-semibold text-gray-600">รายการยา: ${visit.isIcsPrescribed ? '<i class="fas fa-prescription-bottle-alt text-teal-500" title="มีการสั่งใช้ ICS"></i>' : ''}</p><pre class="bg-gray-50 p-2 rounded-md text-gray-700 whitespace-pre-wrap font-sans">${visit.medications || 'ไม่มีข้อมูล'}</pre></div>
-                        <div class="col-span-1 md:col-span-2"><p class="font-semibold text-gray-600">อาการไม่พึงประสงค์:</p><p class="text-gray-700">${visit.sideEffects || 'ไม่มี'}</p></div>
-                        <div class="col-span-1 md:col-span-2"><p class="font-semibold text-gray-600">ประเด็นที่ให้คำแนะนำ:</p><p class="text-gray-700">${visit.counselingNotes || 'ไม่มี'}</p></div>
-                    </div>
-                </div>`).join('');
-        }
-        
-        function renderPefrChart(visits, patientData) {
-            const chartCanvas = document.getElementById('pefrChart');
-            if (!chartCanvas) return;
-            
-            if (pefrChartInstance) {
-                pefrChartInstance.destroy();
-            }
-
-            const ctx = chartCanvas.getContext('2d');
-            
-            const pefrVisits = visits
-                .filter(v => v.actualPEFR)
-                .sort((a, b) => new Date(a.visitDate) - new Date(b.visitDate));
-
-            if (pefrVisits.length === 0) {
-                chartCanvas.parentElement.innerHTML = '<div class="bg-white p-6 rounded-lg shadow-md mb-6"><h3 class="text-xl font-bold mb-4 text-gray-700">แนวโน้มค่า PEFR</h3><p class="text-center text-gray-500 py-8">ไม่มีข้อมูล PEFR สำหรับแสดงผลกราฟ</p></div>';
-                return;
-            }
-
-            const labels = pefrVisits.map(v => new Date(v.visitDate).toLocaleDateString('th-TH'));
-            const actualData = pefrVisits.map(v => v.actualPEFR);
-            const predictedPefr = calculatePredictedPEFR(patientData);
-            const predictedData = predictedPefr ? pefrVisits.map(() => predictedPefr) : [];
-
-            pefrChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'PEFR ที่วัดได้ (L/min)',
-                            data: actualData,
-                            borderColor: 'rgb(59, 130, 246)',
-                            backgroundColor: 'rgba(59, 130, 246, 0.5)',
-                            tension: 0.1,
-                            fill: false,
-                        },
-                        {
-                            label: 'PEFR มาตรฐาน (Predicted)',
-                            data: predictedData,
-                            borderColor: 'rgb(156, 163, 175)',
-                            borderDash: [5, 5],
-                            fill: false,
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    plugins: { legend: { position: 'top' }, title: { display: false } },
-                    scales: { y: { beginAtZero: true } }
-                }
+            publicTableBody.innerHTML = '';
+            filteredData.forEach((med) => {
+                const row = document.createElement('tr');
+                row.className = 'bg-white border-b';
+                const maxDisplay = med.max === null
+                    ? `<span class="text-green-600 font-bold">ไม่จำกัด</span>`
+                    : `<span class="font-bold text-red-600">${Number(med.max).toLocaleString()}</span>`;
+                row.innerHTML = `
+                    <td class="p-4">${med.id}</td>
+                    <td class="p-4 font-semibold">${med.generic}</td>
+                    <td class="p-4">${med.trade}</td>
+                    <td class="p-4">${med.form}</td>
+                    <td class="p-4 text-center text-lg">${maxDisplay}</td>
+                `;
+                publicTableBody.appendChild(row);
             });
-        }
-
-        function calculatePredictedPEFR(patient) {
-            if (!patient?.height || !patient?.birthDate || !patient?.gender) return null;
-
-            const H = Math.round(patient.height);
-            const A = calculateAge(patient.birthDate);
-            if (A === null) return null;
-            
-            const gender = patient.gender;
-
-            if (A < 15) {
-                const childPefr = pefrData.children[H];
-                if (childPefr) return childPefr;
-                return Math.round(-425.5714 + (5.2428 * H));
-            }
-
-            const roundedHeight = Math.round(H / 2) * 2;
-            const genderData = gender === 'ชาย' ? pefrData.male : pefrData.female;
-
-            if (genderData && genderData[A] && genderData[A][roundedHeight]) {
-                return genderData[A][roundedHeight];
-            }
-
-            let pefr = (gender === 'ชาย') ? (6.14 * H) - (0.043 * A) - 499 : (3.76 * H) - (0.026 * A) - 201;
-            return pefr > 0 ? Math.round(pefr) : null;
-        }
-        
-        function calculateAndDisplayEacScore() {
-            const questions = document.querySelectorAll('.eac-question');
-            let totalScore = 0;
-            questions.forEach(q => { totalScore += Number(q.value) || 0; });
-            allUI.eacScoreDisplay.textContent = totalScore;
-
-            let interpretation = '';
-            let interpretationColor = '';
-            if (totalScore === 0) {
-                interpretation = 'ควบคุมโรคได้ดี';
-                interpretationColor = 'text-green-700';
-            } else if (totalScore >= 1 && totalScore <= 2) {
-                interpretation = 'ควบคุมโรคได้บางส่วน';
-                interpretationColor = 'text-yellow-700';
-            } else {
-                interpretation = 'ควบคุมโรคไม่ได้';
-                interpretationColor = 'text-red-700';
-            }
-            allUI.eacInterpretationDisplay.textContent = interpretation;
-            allUI.eacInterpretationDisplay.className = `text-sm font-semibold mt-1 ${interpretationColor}`;
-        }
-
-        function openAddPatientModal() {
-            allUI.patientForm.reset();
-            allUI.patientForm.querySelector('#patientId').value = '';
-            allUI.patientModalTitle.textContent = 'เพิ่มข้อมูลผู้ป่วยใหม่';
-            allUI.patientModal.classList.remove('hidden');
-            allUI.patientModal.classList.add('flex');
-        }
-
-        function openEditPatientModal() {
-            if (!currentPatientData || !currentPatientId) return;
-            allUI.patientForm.reset();
-            allUI.patientModalTitle.textContent = 'แก้ไขข้อมูลผู้ป่วย';
-            
-            allUI.patientForm.querySelector('#patientId').value = currentPatientId;
-            allUI.patientForm.querySelector('#hn').value = currentPatientData.hn;
-            allUI.patientForm.querySelector('#name').value = currentPatientData.name;
-            allUI.patientForm.querySelector('#birthDate').value = currentPatientData.birthDate;
-            allUI.patientForm.querySelector('#height').value = currentPatientData.height;
-            allUI.patientForm.querySelector('#gender').value = currentPatientData.gender;
-            
-            allUI.patientModal.classList.remove('hidden');
-            allUI.patientModal.classList.add('flex');
-        }
-
-        function openAddVisitModal() {
-            allUI.addVisitForm.reset();
-            allUI.addVisitForm.querySelector('#visitId').value = '';
-            allUI.visitModalTitle.textContent = 'บันทึกการติดตาม (Follow-up)';
-            allUI.addVisitForm.querySelector('#visitDate').valueAsDate = new Date();
-            allUI.addVisitForm.querySelector('#nextAppointmentDate').value = currentPatientData.nextAppointmentDate || '';
-            const predicted = calculatePredictedPEFR(currentPatientData);
-            allUI.predictedPEFROutput.value = predicted ? `${predicted} L/min` : 'N/A';
-            calculateAndDisplayEacScore();
-            allUI.addVisitModal.classList.remove('hidden');
-            allUI.addVisitModal.classList.add('flex');
-        }
-
-        function openEditVisitModal(visitData) {
-            allUI.addVisitForm.reset();
-            allUI.addVisitForm.querySelector('#visitId').value = visitData.id;
-            allUI.visitModalTitle.textContent = 'แก้ไขการติดตาม';
-            ['visitDate', 'controlLevel', 'adherence', 'inhalerTechnique', 'techniqueNotes', 'medications', 'sideEffects', 'counselingNotes', 'actualPEFR', 'isIcsPrescribed'].forEach(id => {
-                const el = allUI.addVisitForm.querySelector(`#${id}`);
-                if (el.type === 'checkbox') {
-                    el.checked = visitData[id] || false;
-                } else {
-                    el.value = visitData[id] || '';
-                }
-            });
-            allUI.addVisitForm.querySelector('#nextAppointmentDate').value = currentPatientData.nextAppointmentDate || '';
-            ['eacQ1', 'eacQ2', 'eacQ3', 'eacQ4', 'eacQ5'].forEach(id => {
-                allUI.addVisitForm.querySelector(`#${id}`).value = visitData[id] || '0';
-            });
-            const predicted = calculatePredictedPEFR(currentPatientData);
-            allUI.predictedPEFROutput.value = predicted ? `${predicted} L/min` : 'N/A';
-            allUI.percentPredictedPEFROutput.value = visitData.percentPredictedPEFR ? `${visitData.percentPredictedPEFR}%` : '';
-            calculateAndDisplayEacScore();
-            allUI.addVisitModal.classList.remove('hidden');
-            allUI.addVisitModal.classList.add('flex');
-        }
-
-        async function deleteVisit(visitId) {
-            if (!db || !currentPatientId || !visitId) return;
-            try {
-                const visitDocRef = doc(db, `/artifacts/${appId}/public/data/patients/${currentPatientId}/visits`, visitId);
-                await deleteDoc(visitDocRef);
-                showMessage("ลบประวัติการติดตามสำเร็จ");
-            } catch (error) {
-                console.error("Error deleting visit:", error);
-                showMessage("เกิดข้อผิดพลาดในการลบประวัติ", true);
-            }
-        }
-
-        async function deletePatient(patientId) {
-            if (!db || !patientId) return;
-            try {
-                const visitsRef = collection(db, `/artifacts/${appId}/public/data/patients/${patientId}/visits`);
-                const visitsSnapshot = await getDocs(visitsRef);
-                const deletePromises = visitsSnapshot.docs.map(visitDoc => deleteDoc(visitDoc.ref));
-                await Promise.all(deletePromises);
-
-                const patientDocRef = doc(db, `/artifacts/${appId}/public/data/patients`, patientId);
-                await deleteDoc(patientDocRef);
-
-                showMessage("ลบผู้ป่วยและข้อมูลทั้งหมดสำเร็จ");
-
-                if (currentPatientId === patientId) {
-                    if (pefrChartInstance) pefrChartInstance.destroy();
-                    allUI.detailContent.classList.add('hidden');
-                    allUI.emptyState.classList.remove('hidden');
-                    currentPatientId = null;
-                    currentPatientData = null;
-                }
-            } catch (error) {
-                console.error("Error deleting patient:", error);
-                showMessage("เกิดข้อผิดพลาดในการลบผู้ป่วย", true);
-            }
-        }
-        
-        async function renderDashboard() {
-            if (!db || !userId) return;
-            allUI.dashboardLoading.style.display = 'block';
-            allUI.dashboardContent.style.display = 'none';
-            
-            document.getElementById('total-patients').textContent = allPatientsData.length;
-            
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            const todayString = today.toISOString().split('T')[0];
-
-            const appointmentsToday = allPatientsData.filter(p => p.nextAppointmentDate === todayString);
-            
-            const appointmentTitleEl = document.getElementById('appointment-title');
-            const appointmentInfoEl = document.getElementById('appointment-info');
-            const appointmentIconEl = document.getElementById('appointment-icon');
-
-            if (appointmentsToday.length > 0) {
-                appointmentTitleEl.textContent = 'นัดหมายวันนี้';
-                appointmentInfoEl.textContent = appointmentsToday.length;
-                appointmentInfoEl.className = 'text-4xl font-bold text-green-600';
-                appointmentIconEl.className = 'fas fa-calendar-check text-4xl text-green-500 mb-3';
-            } else {
-                const futureAppointments = allPatientsData
-                    .map(p => p.nextAppointmentDate)
-                    .filter(d => d && new Date(d) >= today)
-                    .sort();
-                
-                if (futureAppointments.length > 0) {
-                    const nextAppointmentDate = new Date(futureAppointments[0]);
-                    appointmentTitleEl.textContent = 'นัดหมายครั้งถัดไป';
-                    appointmentInfoEl.textContent = nextAppointmentDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
-                    appointmentInfoEl.className = 'text-3xl font-bold text-gray-800';
-                    appointmentIconEl.className = 'fas fa-calendar-alt text-4xl text-gray-500 mb-3';
-                } else {
-                    appointmentTitleEl.textContent = 'นัดหมาย';
-                    appointmentInfoEl.textContent = 'ไม่มี';
-                     appointmentInfoEl.className = 'text-4xl font-bold text-gray-400';
-                    appointmentIconEl.className = 'fas fa-calendar-times text-4xl text-gray-400 mb-3';
-                }
-            }
-
-
-            const latestVisitsPromises = allPatientsData.map(patient => {
-                const visitsRef = collection(db, `/artifacts/${appId}/public/data/patients/${patient.id}/visits`);
-                const q = query(visitsRef, orderBy('visitDate', 'desc'), limit(1));
-                return getDocs(q);
-            });
-
-            const snapshots = await Promise.all(latestVisitsPromises);
-            const latestVisits = snapshots.map(snapshot => snapshot.empty ? null : snapshot.docs[0].data()).filter(Boolean);
-            
-            const controlCounts = { 'ควบคุมโรคได้ดี': 0, 'ควบคุมโรคได้บางส่วน': 0, 'ควบคุมโรคไม่ได้': 0 };
-            latestVisits.forEach(visit => {
-                if(visit.eacInterpretation && controlCounts.hasOwnProperty(visit.eacInterpretation)) {
-                    controlCounts[visit.eacInterpretation]++;
-                }
-            });
-
-            const icsCounts = { withIcs: 0, withoutIcs: 0 };
-            latestVisits.forEach(visit => {
-                if (visit.isIcsPrescribed) {
-                    icsCounts.withIcs++;
-                } else {
-                    icsCounts.withoutIcs++;
-                }
-            });
-
-            renderDoughnutChart('controlRateChart', 'อัตราการควบคุมโรค', Object.keys(controlCounts), Object.values(controlCounts), ['#22c55e', '#facc15', '#ef4444']);
-            renderDoughnutChart('icsRateChart', 'สัดส่วนการใช้ ICS', ['ได้รับ ICS', 'ไม่ได้รับ ICS'], Object.values(icsCounts), ['#3b82f6', '#9ca3af']);
-
-            allUI.dashboardLoading.style.display = 'none';
-            allUI.dashboardContent.style.display = 'grid';
-        }
-
-        function renderDoughnutChart(canvasId, label, labels, data, colors) {
-            const chartCanvas = document.getElementById(canvasId);
-            if (!chartCanvas) return;
-            
-            const existingChart = Chart.getChart(canvasId);
-            if (existingChart) {
-                existingChart.destroy();
-            }
-
-            new Chart(chartCanvas.getContext('2d'), {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: label,
-                        data: data,
-                        backgroundColor: colors,
-                        hoverOffset: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                        }
-                    }
-                }
-            });
-        }
-        
-        function showView(viewName) {
-            allUI.patientManagementView.classList.add('hidden');
-            allUI.dashboardView.classList.add('hidden');
-            allUI.navPatients.classList.remove('active');
-            allUI.navDashboard.classList.remove('active');
-
-            if (viewName === 'dashboard') {
-                allUI.dashboardView.classList.remove('hidden');
-                allUI.navDashboard.classList.add('active');
-                renderDashboard();
-            } else {
-                allUI.patientManagementView.classList.remove('hidden');
-                allUI.navPatients.classList.add('active');
-            }
-        }
-        
-        function listenToPatients() {
-            if (patientsUnsubscribe) patientsUnsubscribe();
-            const patientsCollectionRef = collection(db, `/artifacts/${appId}/public/data/patients`);
-            patientsUnsubscribe = onSnapshot(query(patientsCollectionRef), (snapshot) => {
-                allPatientsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                allPatientsData.sort((a,b) => a.name.localeCompare(b.name, 'th'));
-                filterAndRenderPatients();
-                if (!allUI.dashboardView.classList.contains('hidden')) {
-                    renderDashboard();
-                }
-            }, (error) => {
-                console.error("Error listening to patient collection:", error);
-                showMessage("ไม่สามารถเชื่อมต่อฐานข้อมูลผู้ป่วยได้", true);
-                allUI.patientLoading.textContent = "เกิดข้อผิดพลาดในการโหลดข้อมูล";
-            });
-        }
-        
-        // --- Event Listeners Setup ---
-        function setupEventListeners() {
-            document.body.addEventListener('click', handleGlobalClick);
-            allUI.patientForm.addEventListener('submit', handlePatientFormSubmit);
-            allUI.addVisitForm.addEventListener('submit', handleVisitFormSubmit);
-            allUI.searchInput.addEventListener('input', filterAndRenderPatients);
-            allUI.eacQuestionsContainer.addEventListener('change', calculateAndDisplayEacScore);
-            allUI.actualPEFRInput.addEventListener('input', (e) => {
-                const actual = parseFloat(e.target.value), predicted = calculatePredictedPEFR(currentPatientData);
-                allUI.percentPredictedPEFROutput.value = (actual && predicted) ? `${((actual / predicted) * 100).toFixed(1)}%` : '';
-            });
-        }
-        
-        // --- Single Click Handler ---
-        function handleGlobalClick(e) {
-            const target = e.target;
-            const closest = (selector) => target.closest(selector);
-
-            // Navigation
-            if (closest('#nav-patients')) { e.preventDefault(); showView('patients'); }
-            if (closest('#nav-dashboard')) { e.preventDefault(); showView('dashboard'); }
-
-            // Patient List Actions
-            const patientInfo = closest('.patient-item-info');
-            if (patientInfo) {
-                const container = patientInfo.closest('.patient-item-container');
-                const patientId = container.querySelector('.delete-patient-btn').dataset.id;
-                document.querySelectorAll('.patient-item-container').forEach(el => el.classList.remove('bg-blue-100'));
-                container.classList.add('bg-blue-100');
-                currentPatientId = patientId;
-                showPatientDetails(currentPatientId);
-            }
-            const deletePatientBtn = closest('.delete-patient-btn');
-            if (deletePatientBtn) {
-                e.stopPropagation();
-                const patientId = deletePatientBtn.dataset.id;
-                const patientName = deletePatientBtn.dataset.name;
-                showConfirmModal(`คุณแน่ใจหรือไม่ว่าต้องการลบผู้ป่วย "${patientName}" และข้อมูลทั้งหมด?`, () => deletePatient(patientId));
-            }
-
-            // Detail View Actions
-            if (closest('#openAddVisitModalBtn')) { openAddVisitModal(); }
-            if (closest('#openEditPatientModalBtn')) { openEditPatientModal(); }
-            const editVisitBtn = closest('.edit-visit-btn');
-            if (editVisitBtn) {
-                const visitId = editVisitBtn.dataset.visitId;
-                const visitData = allVisitsData.find(v => v.id === visitId);
-                if (visitData) openEditVisitModal(visitData);
-            }
-            const deleteVisitBtn = closest('.delete-visit-btn');
-            if (deleteVisitBtn) {
-                const visitId = deleteVisitBtn.dataset.visitId;
-                const visitDate = new Date(deleteVisitBtn.dataset.visitDate).toLocaleDateString('th-TH');
-                showConfirmModal(`คุณแน่ใจหรือไม่ว่าต้องการลบการติดตามของวันที่ ${visitDate}?`, () => deleteVisit(visitId));
-            }
-            
-            // Modals & Global Actions
-            if (closest('#openAddPatientModalBtn')) { openAddPatientModal(); }
-            if (closest('#closePatientModal')) { allUI.patientModal.classList.add('hidden'); }
-            if (closest('#closeVisitModal')) { allUI.addVisitModal.classList.add('hidden'); }
-            if (closest('#confirmBtn')) { if (confirmCallback) confirmCallback(); allUI.confirmModal.classList.add('hidden'); }
-            if (closest('#cancelBtn')) { allUI.confirmModal.classList.add('hidden'); }
-        }
-
-        // --- Form Handlers ---
-        async function handlePatientFormSubmit(e) {
-            e.preventDefault();
-            if (!db || !userId) return showMessage("ยังไม่ได้เชื่อมต่อ", true);
-            
-            const patientId = allUI.patientForm.querySelector('#patientId').value;
-            const patientData = {
-                hn: allUI.patientForm.querySelector('#hn').value.padStart(7, '0'),
-                name: allUI.patientForm.querySelector('#name').value,
-                birthDate: allUI.patientForm.querySelector('#birthDate').value, 
-                height: Number(allUI.patientForm.querySelector('#height').value),
-                gender: allUI.patientForm.querySelector('#gender').value,
-                updatedAt: new Date()
-            };
-
-            try {
-                if (patientId) { // Edit mode
-                    const patientDocRef = doc(db, `/artifacts/${appId}/public/data/patients`, patientId);
-                    await updateDoc(patientDocRef, patientData);
-                    showMessage("แก้ไขข้อมูลผู้ป่วยสำเร็จ!");
-                    showPatientDetails(patientId);
-                } else { // Add mode
-                    patientData.createdAt = new Date();
-                    await addDoc(collection(db, `/artifacts/${appId}/public/data/patients`), patientData);
-                    showMessage("เพิ่มผู้ป่วยสำเร็จ!");
-                }
-                allUI.patientForm.reset();
-                allUI.patientModal.classList.add('hidden');
-            } catch (error) {
-                console.error("Error saving patient:", error);
-                showMessage("เกิดข้อผิดพลาดในการบันทึกข้อมูลผู้ป่วย", true);
-            }
-        }
-
-        async function handleVisitFormSubmit(e) {
-            e.preventDefault();
-            if (!db || !currentPatientId) return showMessage("กรุณาเลือกผู้ป่วยก่อนบันทึก", true);
-            const visitId = allUI.addVisitForm.querySelector('#visitId').value;
-            const visitData = {
-                visitDate: allUI.addVisitForm.querySelector('#visitDate').value,
-                controlLevel: allUI.addVisitForm.querySelector('#controlLevel').value,
-                adherence: allUI.addVisitForm.querySelector('#adherence').value,
-                inhalerTechnique: allUI.addVisitForm.querySelector('#inhalerTechnique').value,
-                techniqueNotes: allUI.addVisitForm.querySelector('#techniqueNotes').value,
-                medications: allUI.addVisitForm.querySelector('#medications').value,
-                isIcsPrescribed: allUI.addVisitForm.querySelector('#isIcsPrescribed').checked,
-                sideEffects: allUI.addVisitForm.querySelector('#sideEffects').value,
-                counselingNotes: allUI.addVisitForm.querySelector('#counselingNotes').value,
-                actualPEFR: allUI.addVisitForm.querySelector('#actualPEFR').value ? Number(allUI.addVisitForm.querySelector('#actualPEFR').value) : null,
-                predictedPEFR: calculatePredictedPEFR(currentPatientData),
-                percentPredictedPEFR: allUI.percentPredictedPEFROutput.value.replace('%', '') || null,
-                eacScore: Number(allUI.eacScoreDisplay.textContent) || 0,
-                eacInterpretation: allUI.eacInterpretationDisplay.textContent || '',
-                eacQ1: allUI.addVisitForm.querySelector('#eacQ1').value, 
-                eacQ2: allUI.addVisitForm.querySelector('#eacQ2').value,
-                eacQ3: allUI.addVisitForm.querySelector('#eacQ3').value, 
-                eacQ4: allUI.addVisitForm.querySelector('#eacQ4').value,
-                eacQ5: allUI.addVisitForm.querySelector('#eacQ5').value,
-                updatedAt: new Date()
-            };
-            try {
-                const nextAppointmentDate = allUI.addVisitForm.querySelector('#nextAppointmentDate').value;
-                if (nextAppointmentDate) {
-                    const patientDocRef = doc(db, `/artifacts/${appId}/public/data/patients`, currentPatientId);
-                    await updateDoc(patientDocRef, { nextAppointmentDate: nextAppointmentDate });
-                }
-
-                const visitCollectionRef = collection(db, `/artifacts/${appId}/public/data/patients/${currentPatientId}/visits`);
-                if (visitId) {
-                    await updateDoc(doc(visitCollectionRef, visitId), visitData);
-                    showMessage("แก้ไขข้อมูลสำเร็จ!");
-                } else {
-                    visitData.createdAt = new Date();
-                    await addDoc(visitCollectionRef, visitData);
-                    showMessage("บันทึกการติดตามสำเร็จ!");
-                }
-                allUI.addVisitForm.reset();
-                allUI.addVisitModal.classList.add('hidden');
-            } catch (error) {
-                console.error("Error saving visit: ", error);
-                showMessage("เกิดข้อผิดพลาดในการบันทึก", true);
-            }
-        }
-        
-        // --- Initialization ---
-        async function init() {
-            try {
-                app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        listenToPatients();
-                    } else {
-                        try {
-                            const userCredential = await signInAnonymously(auth);
-                            userId = userCredential.user.uid;
-                        } catch (error) {
-                             console.error("Anonymous sign-in failed:", error);
-                             document.body.innerHTML = `<div class="p-8 text-center text-red-600"><h1 class="text-2xl font-bold">Authentication Error</h1><p>Could not connect to the service.</p></div>`;
-                        }
-                    }
-                });
-            } catch (error) {
-                console.error("Firebase initialization failed:", error);
-                document.body.innerHTML = `<div class="p-8 text-center text-red-600"><h1 class="text-2xl font-bold">Initialization Error</h1><p>${error.message}</p></div>`;
-            }
-        }
-
-        window.onload = () => {
-            setupEventListeners();
-            init();
         };
+
+        const renderAdminTable = () => {
+            const searchTerm = adminSearchInput.value.toLowerCase().trim();
+            const filteredData = medicineData.filter(med => 
+                med.generic.toLowerCase().includes(searchTerm) ||
+                med.trade.toLowerCase().includes(searchTerm) ||
+                med.id.includes(searchTerm)
+            );
+            adminTableBody.innerHTML = '';
+            filteredData.forEach((med) => {
+                const row = document.createElement('tr');
+                row.className = 'bg-white border-b';
+                const maxDisplay = med.max === null
+                    ? `<span class="text-green-600 font-bold">ไม่จำกัด</span>`
+                    : `<span class="font-bold text-red-600">${Number(med.max).toLocaleString()}</span>`;
+                row.innerHTML = `
+                    <td class="p-4">${med.id}</td>
+                    <td class="p-4 font-semibold">${med.generic}</td>
+                    <td class="p-4">${med.trade}</td>
+                    <td class="p-4">${med.form}</td>
+                    <td class="p-4 text-center text-lg">${maxDisplay}</td>
+                    <td class="p-4 text-center">
+                        <button class="edit-btn bg-yellow-400 hover:bg-yellow-500 text-white text-sm py-1 px-2 rounded" data-id="${med.id}">แก้ไข</button>
+                        <button class="delete-btn bg-red-500 hover:bg-red-600 text-white text-sm py-1 px-2 rounded ml-2" data-id="${med.id}">ลบ</button>
+                    </td>
+                `;
+                adminTableBody.appendChild(row);
+            });
+        };
+        
+        const populateFormDropdown = () => {
+            formSelect.innerHTML = ''; // Clear existing options
+            drugForms.forEach(form => {
+                const option = document.createElement('option');
+                option.value = form;
+                option.textContent = form;
+                formSelect.appendChild(option);
+            });
+            const addNewOption = document.createElement('option');
+            addNewOption.value = 'add_new';
+            addNewOption.textContent = 'เพิ่มรูปแบบยาใหม่...';
+            formSelect.appendChild(addNewOption);
+        };
+
+        // --- Modal Functions ---
+        const showDrugModal = (mode, drugId = null) => {
+            currentEditId = drugId;
+            drugForm.reset();
+            populateFormDropdown();
+            newFormContainer.classList.add('hidden');
+            newFormInput.required = false;
+            modalTitle.textContent = mode === 'edit' ? 'แก้ไขรายการยา' : 'เพิ่มยาใหม่';
+            maxInput.disabled = false;
+            maxInput.required = true;
+            unlimitedCheckbox.checked = false;
+            if (mode === 'edit') {
+                const drug = medicineData.find(d => d.id === drugId);
+                if (drug) {
+                    document.getElementById('genericName').value = drug.generic;
+                    document.getElementById('tradeName').value = drug.trade;
+                    
+                    if (drugForms.includes(drug.form)) {
+                        formSelect.value = drug.form;
+                    } else {
+                        const newOption = document.createElement('option');
+                        newOption.value = drug.form;
+                        newOption.textContent = drug.form;
+                        formSelect.insertBefore(newOption, formSelect.querySelector('option[value="add_new"]'));
+                        formSelect.value = drug.form;
+                    }
+
+                    if (drug.max === null) {
+                        unlimitedCheckbox.checked = true;
+                        maxInput.disabled = true;
+                        maxInput.required = false;
+                        maxInput.value = '';
+                    } else {
+                        maxInput.value = drug.max;
+                    }
+                }
+            }
+            drugModal.classList.remove('hidden');
+        };
+        const hideDrugModal = () => drugModal.classList.add('hidden');
+        const hideChangePasswordModal = () => {
+            changePasswordForm.reset();
+            changePasswordModal.classList.add('hidden');
+        };
+
+        // --- Event Handlers ---
+        const handleFormSubmit = (event) => {
+            event.preventDefault();
+            const generic = document.getElementById('genericName').value.trim();
+            let formValue;
+            if (formSelect.value === 'add_new') {
+                formValue = newFormInput.value.trim();
+                if (formValue && !drugForms.includes(formValue)) {
+                    drugForms.push(formValue);
+                }
+            } else {
+                formValue = formSelect.value;
+            }
+
+            const isUnlimited = unlimitedCheckbox.checked;
+            const max = isUnlimited ? null : parseInt(maxInput.value, 10);
+            
+            if (!generic || !formValue || (!isUnlimited && isNaN(max))) {
+                alert("กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน");
+                return;
+            }
+            if (currentEditId) {
+                const drugIndex = medicineData.findIndex(d => d.id === currentEditId);
+                if (drugIndex > -1) medicineData[drugIndex] = { ...medicineData[drugIndex], generic, trade: document.getElementById('tradeName').value.trim(), form: formValue, max };
+            } else {
+                medicineData.push({ id: String(Date.now()), generic, trade: document.getElementById('tradeName').value.trim(), form: formValue, max });
+            }
+            hideDrugModal();
+            renderAdminTable();
+        };
+
+        const handleAdminTableClick = (event) => {
+            const target = event.target;
+            const drugId = target.dataset.id;
+            if (!drugId) return;
+
+            if (target.classList.contains('delete-btn')) {
+                if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบยา ID: ${drugId}?`)) {
+                    medicineData = medicineData.filter(d => d.id !== drugId);
+                    renderAdminTable();
+                }
+            } else if (target.classList.contains('edit-btn')) {
+                showDrugModal('edit', drugId);
+            }
+        };
+
+        const handleChangePasswordSubmit = (event) => {
+            event.preventDefault();
+            const oldPass = oldPasswordInput.value;
+            const newPass = newPasswordInput.value;
+            const confirmPass = confirmNewPasswordInput.value;
+
+            if (oldPass !== ADMIN_PASSWORD) {
+                alert("รหัสผ่านเก่าไม่ถูกต้อง!");
+                return;
+            }
+            if (!newPass || newPass !== confirmPass) {
+                alert("รหัสผ่านใหม่และการยืนยันไม่ตรงกัน!");
+                return;
+            }
+            if (newPass === oldPass) {
+                alert("รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านเก่า!");
+                return;
+            }
+
+            ADMIN_PASSWORD = newPass;
+            alert("เปลี่ยนรหัสผ่านสำเร็จแล้ว!");
+            hideChangePasswordModal();
+        };
+
+        // --- Event Listeners Setup ---
+        // Navigation
+        goToLoginBtn.addEventListener('click', () => showPage('login-page'));
+        cancelLoginBtn.addEventListener('click', () => showPage('public-page'));
+        logoutBtn.addEventListener('click', () => {
+            renderPublicTable();
+            showPage('public-page');
+        });
+
+        // Login
+        submitPasswordBtn.addEventListener('click', () => {
+            if (passwordInput.value === ADMIN_PASSWORD) {
+                passwordInput.value = '';
+                passwordError.textContent = '';
+                renderAdminTable();
+                showPage('admin-page');
+            } else {
+                passwordError.textContent = 'รหัสผ่านไม่ถูกต้อง!';
+                passwordInput.select();
+            }
+        });
+        passwordInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') submitPasswordBtn.click();
+            passwordError.textContent = '';
+        });
+
+        // Search
+        publicSearchInput.addEventListener('input', renderPublicTable);
+        adminSearchInput.addEventListener('input', renderAdminTable);
+
+        // Admin Actions
+        addDrugBtn.addEventListener('click', () => showDrugModal('add'));
+        adminTableBody.addEventListener('click', handleAdminTableClick);
+        changePasswordBtn.addEventListener('click', () => {
+            changePasswordModal.classList.remove('hidden');
+        });
+        
+        // Modal Actions
+        closeDrugModalBtn.addEventListener('click', hideDrugModal);
+        drugForm.addEventListener('submit', handleFormSubmit);
+        unlimitedCheckbox.addEventListener('change', () => {
+            maxInput.disabled = unlimitedCheckbox.checked;
+            maxInput.required = !unlimitedCheckbox.checked;
+            if (unlimitedCheckbox.checked) maxInput.value = '';
+        });
+        formSelect.addEventListener('change', () => {
+            if (formSelect.value === 'add_new') {
+                newFormContainer.classList.remove('hidden');
+                newFormInput.required = true;
+            } else {
+                newFormContainer.classList.add('hidden');
+                newFormInput.required = false;
+            }
+        });
+        closeChangePasswordModalBtn.addEventListener('click', hideChangePasswordModal);
+        changePasswordForm.addEventListener('submit', handleChangePasswordSubmit);
+
+        // --- Initial Load ---
+        renderPublicTable();
+        showPage('public-page');
+
+    });
     </script>
 </body>
 </html>
