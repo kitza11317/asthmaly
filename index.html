@@ -22,6 +22,31 @@
         details > summary { list-style: none; }
         details > summary::-webkit-details-marker { display: none; }
         #main-app-view, #login-view { display: none; }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #actionPlanModal, #actionPlanModal * {
+                visibility: visible;
+            }
+            #actionPlanModal {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                border: none;
+                box-shadow: none;
+                overflow: visible;
+            }
+            #actionPlanContent {
+                border: none;
+            }
+            .no-print, .no-print * {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -65,8 +90,9 @@
             </div>
             <div class="flex items-center gap-4">
                  <div class="text-right">
-                    <p id="user-email" class="text-sm text-gray-700 font-semibold"></p>
+                    <p id="user-display" class="text-sm text-gray-700 font-semibold"></p>
                     <p id="user-role" class="text-xs font-mono px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full inline-block"></p>
+                    <button id="changePasswordBtn" class="text-xs text-blue-600 hover:underline"><i class="fas fa-key"></i> เปลี่ยนรหัสผ่าน</button>
                     <button id="logout-btn" class="text-xs text-red-600 hover:underline">ออกจากระบบ</button>
                 </div>
                 <nav id="main-nav" class="flex items-center gap-2">
@@ -79,7 +105,7 @@
 
         <main id="main-content" class="h-[calc(100vh-76px)]">
             <div id="patient-management-view" class="flex h-full">
-                <div class="w-1/3 bg-white border-r border-gray-200 flex flex-col">
+                <div class="w-1/4 bg-white border-r border-gray-200 flex flex-col">
                     <div class="p-4 grid grid-cols-2 gap-2">
                         <button id="openAddPatientModalBtn" class="w-full bg-blue-600 text-white py-2 px-3 rounded-lg hover:bg-blue-700 transition duration-300 flex items-center justify-center text-sm">
                             <i class="fas fa-user-plus mr-2"></i>เพิ่มผู้ป่วย
@@ -92,7 +118,7 @@
                     <div class="p-4 border-t border-b border-gray-200"><div class="relative"><span class="absolute inset-y-0 left-0 flex items-center pl-3"><i class="fas fa-search text-gray-400"></i></span><input type="text" id="searchInput" placeholder="ค้นหาด้วยชื่อ หรือ HN..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></div></div>
                     <div id="patientList" class="overflow-y-auto flex-grow"><p id="patient-loading" class="p-4 text-gray-500">กำลังโหลดข้อมูลผู้ป่วย...</p></div>
                 </div>
-                <div class="w-2/3 flex flex-col bg-gray-50">
+                <div class="w-3/4 flex flex-col bg-gray-50">
                     <div id="patientDetailView" class="flex-grow p-6 overflow-y-auto">
                         <div id="empty-state" class="flex flex-col items-center justify-center h-full text-gray-500"><i class="fas fa-inhaler fa-4x mb-4 text-gray-400"></i><h2 class="text-2xl font-semibold">กรุณาเลือกผู้ป่วย</h2><p>เลือกผู้ป่วยจากรายการด้านซ้ายเพื่อดูรายละเอียด</p></div>
                         <div id="detail-content" class="hidden"></div>
@@ -114,7 +140,12 @@
                 </div>
             </div>
             <div id="user-management-view" class="p-8 overflow-y-auto h-full hidden">
-                <h2 class="text-3xl font-bold text-gray-800 mb-6">จัดการผู้ใช้งาน</h2>
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-bold text-gray-800">จัดการผู้ใช้งาน</h2>
+                    <button id="addUserBtn" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition flex items-center">
+                        <i class="fas fa-user-plus mr-2"></i>เพิ่มผู้ใช้งานใหม่
+                    </button>
+                </div>
                 <div id="user-list-container" class="bg-white rounded-lg shadow-md">
                     <!-- User list will be rendered here by JavaScript -->
                 </div>
@@ -192,12 +223,95 @@
         </div>
     </div>
     
+    <!-- User Modal -->
+    <div id="userModal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md m-4 modal">
+            <div class="p-4 border-b flex justify-between items-center"><h2 id="userModalTitle" class="text-lg font-bold text-gray-700">เพิ่มผู้ใช้งานใหม่</h2><button id="closeUserModal" class="text-gray-500 hover:text-gray-800">&times;</button></div>
+            <div class="p-6">
+                <form id="userForm">
+                    <input type="hidden" id="userId">
+                    <div class="mb-4"><label for="username" class="block text-sm font-medium text-gray-700 mb-1">ชื่อผู้ใช้ (Username)</label><input type="text" id="username" required class="w-full px-3 py-2 border border-gray-300 rounded-md"></div>
+                    <div class="mb-4"><label for="password" class="block text-sm font-medium text-gray-700 mb-1">รหัสผ่าน</label><input type="password" id="password" required class="w-full px-3 py-2 border border-gray-300 rounded-md"></div>
+                    <div class="mb-4"><label for="role" class="block text-sm font-medium text-gray-700 mb-1">บทบาท (Role)</label><select id="role" required class="w-full px-3 py-2 border border-gray-300 rounded-md"><option value="user" selected>User</option><option value="moderator">Moderator</option><option value="admin">Admin</option></select></div>
+                    <div class="flex justify-end"><button type="submit" id="saveUserBtn" class="bg-indigo-600 text-white py-2 px-6 rounded-lg hover:bg-indigo-700">บันทึก</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Asthma Action Plan Modal -->
+    <div id="actionPlanModal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl m-4 modal flex flex-col">
+            <div class="p-4 border-b flex justify-between items-center no-print">
+                <h2 class="text-xl font-bold text-gray-800">Asthma Action Plan</h2>
+                <div>
+                    <button id="printActionPlanBtn" class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"><i class="fas fa-print mr-2"></i>พิมพ์</button>
+                    <button id="closeActionPlanModal" class="ml-2 text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+                </div>
+            </div>
+            <div id="actionPlanContent" class="p-6 overflow-y-auto">
+                <div class="text-center mb-4 border-b pb-4">
+                    <h3 class="text-2xl font-bold">แผนปฏิบัติการเมื่อมีอาการหืดกำเริบ</h3>
+                    <p class="text-lg">สำหรับ <span id="plan-patient-name" class="font-semibold"></span> (HN: <span id="plan-patient-hn" class="font-semibold"></span>)</p>
+                    <p>ค่า PEFR ที่ดีที่สุดของคุณ: <span id="plan-best-pefr" class="font-semibold"></span> L/min</p>
+                </div>
+                <div class="space-y-4">
+                    <!-- Green Zone -->
+                    <div class="p-4 rounded-lg bg-green-100 border border-green-300">
+                        <h4 class="font-bold text-xl text-green-800 flex items-center"><i class="fas fa-check-circle mr-3"></i>โซนสีเขียว (ควบคุมอาการได้ดี)</h4>
+                        <p class="font-semibold mt-2">PEFR: <span id="plan-green-zone"></span> L/min (มากกว่า 80% ของค่าที่ดีที่สุด)</p>
+                        <ul class="list-disc list-inside mt-2 text-gray-700">
+                            <li>ไม่มีอาการหอบ ไอ หรือแน่นหน้าอก</li>
+                            <li>ทำกิจกรรมต่างๆ ได้ตามปกติ</li>
+                        </ul>
+                        <div class="mt-2">
+                            <label class="font-semibold text-gray-800">การปฏิบัติ:</label>
+                            <textarea id="plan-green-action" class="w-full p-2 mt-1 border rounded-md bg-white" rows="3">ใช้ยาควบคุมอาการ (Controller) ตามที่แพทย์สั่งอย่างสม่ำเสมอ</textarea>
+                        </div>
+                    </div>
+                    <!-- Yellow Zone -->
+                    <div class="p-4 rounded-lg bg-yellow-100 border border-yellow-300">
+                        <h4 class="font-bold text-xl text-yellow-800 flex items-center"><i class="fas fa-exclamation-triangle mr-3"></i>โซนสีเหลือง (อาการกำเริบเล็กน้อย-ปานกลาง)</h4>
+                        <p class="font-semibold mt-2">PEFR: <span id="plan-yellow-zone"></span> L/min (50% - 80% ของค่าที่ดีที่สุด)</p>
+                         <ul class="list-disc list-inside mt-2 text-gray-700">
+                            <li>มีอาการไอ หายใจลำบาก หรือแน่นหน้าอก</li>
+                            <li>ตื่นกลางคืนเนื่องจากอาการหอบ</li>
+                        </ul>
+                        <div class="mt-2">
+                            <label class="font-semibold text-gray-800">การปฏิบัติ:</label>
+                            <textarea id="plan-yellow-action" class="w-full p-2 mt-1 border rounded-md bg-white" rows="4">1. พ่นยาขยายหลอดลม (Reliever) 2-4 ครั้ง ทันที
+2. หากอาการไม่ดีขึ้นใน 20 นาที สามารถพ่นยาซ้ำได้
+3. เพิ่มยาควบคุมอาการ (Controller) ตามแผนของแพทย์
+4. หากอาการยังไม่ดีขึ้น หรือ PEFR ยังอยู่ในโซนสีเหลือง ให้ไปพบแพทย์</textarea>
+                        </div>
+                    </div>
+                    <!-- Red Zone -->
+                    <div class="p-4 rounded-lg bg-red-100 border border-red-300">
+                        <h4 class="font-bold text-xl text-red-800 flex items-center"><i class="fas fa-times-circle mr-3"></i>โซนสีแดง (อาการกำเริบรุนแรง)</h4>
+                        <p class="font-semibold mt-2">PEFR: <span id="plan-red-zone"></span> L/min (น้อยกว่า 50% ของค่าที่ดีที่สุด)</p>
+                         <ul class="list-disc list-inside mt-2 text-gray-700">
+                            <li>หอบมาก พูดเป็นประโยคสั้นๆ ไม่ได้</li>
+                            <li>ยาขยายหลอดลมบรรเทาอาการได้เพียงเล็กน้อย</li>
+                            <li>ริมฝีปากหรือเล็บสีเขียว</li>
+                        </ul>
+                         <div class="mt-2">
+                            <label class="font-semibold text-gray-800">การปฏิบัติ:</label>
+                            <textarea id="plan-red-action" class="w-full p-2 mt-1 border rounded-md bg-white" rows="3">1. พ่นยาขยายหลอดลม (Reliever) 4-6 ครั้ง ทันที
+2. รีบไปโรงพยาบาลที่ใกล้ที่สุดทันที</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
     <!-- Confirm Modal -->
     <div id="confirmModal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-sm m-4 modal">
             <div class="p-6 text-center">
                 <div class="flex justify-center mb-4"><i class="fas fa-exclamation-triangle text-5xl text-red-500"></i></div>
-                <h3 class="text-lg font-semibold text-gray-800 mb-2">ยืนยันการลบ</h3>
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">ยืนยันการกระทำ</h3>
                 <p id="confirmModalText" class="text-sm text-gray-600 mb-6">คุณแน่ใจหรือไม่?</p>
                 <div class="flex justify-center gap-4"><button id="cancelBtn" class="py-2 px-6 bg-gray-200 rounded-lg hover:bg-gray-300">ยกเลิก</button><button id="confirmBtn" class="py-2 px-6 bg-red-600 text-white rounded-lg hover:bg-red-700">ยืนยัน</button></div>
             </div>
@@ -215,7 +329,8 @@
             onAuthStateChanged, 
             createUserWithEmailAndPassword,
             signInWithEmailAndPassword,
-            signOut
+            signOut,
+            updatePassword
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { 
             getFirestore, 
@@ -250,985 +365,1129 @@
         const pefrData = {
             children: { 100:99,101:104,102:109,103:114,104:120,105:125,106:130,107:135,108:141,109:146,110:151,111:156,112:162,113:167,114:172,115:177,116:183,117:188,118:193,119:198,120:204,121:209,122:214,123:219,124:225,125:230,126:235,127:240,128:246,129:251,130:256,131:261,132:266,133:272,134:277,135:282,136:287,137:293,138:298,139:303,140:308,141:314,142:319,143:324,144:329,145:335,146:340,147:345,148:350,149:356,150:361,151:366,152:371,153:377,154:382,155:387,156:392,157:398,158:403,159:408,160:413,161:419,162:424,163:429,164:434,165:439,166:445,167:450,168:455,169:460,170:466,171:471,172:476,173:481,174:487,175:492,176:497,177:502,178:508,179:513,180:518 },
             male: { 15:{150:374,152:390,154:405,156:420,158:435,160:450,162:465,164:480,166:495,168:511,170:526,172:541,174:556,176:571,178:586,180:601,182:616,184:632},16:{150:381,152:396,154:411,156:426,158:441,160:456,162:471,164:486,166:501,168:516,170:531,172:546,174:561,176:576,178:591,180:606,182:621,184:636},17:{150:386,152:401,154:416,156:431,158:446,160:461,162:476,164:491,166:505,168:520,170:535,172:550,174:565,176:580,178:595,180:610,182:624,184:639},18:{150:392,152:407,154:422,156:436,158:451,160:466,162:481,164:495,166:510,168:525,170:540,172:554,174:569,176:584,178:599,180:613,182:628,184:643},19:{150:397,152:412,154:427,156:441,158:456,160:471,162:485,164:500,166:515,168:529,170:544,172:558,174:573,176:588,178:602,180:617,182:632,184:646},20:{150:403,152:417,154:432,156:446,158:461,160:475,162:490,164:504,166:519,168:533,170:548,172:562,174:577,176:591,178:606,180:620,182:635,184:650},21:{150:408,152:422,154:436,156:451,158:465,160:480,162:494,164:508,166:523,168:537,170:552,172:566,174:580,176:595,178:609,180:624,182:638,184:652},22:{150:412,152:427,154:441,156:455,158:470,160:484,162:498,164:512,166:527,168:541,170:555,172:570,174:584,176:598,178:612,180:627,182:641,184:655},23:{150:417,152:431,154:445,156:459,158:474,160:488,162:502,164:516,166:530,168:544,170:559,172:573,174:587,176:601,178:615,180:629,182:644,184:658},24:{150:421,152:435,154:449,156:463,158:477,160:492,162:506,164:520,166:534,168:548,170:562,172:576,174:590,176:604,178:618,180:632,182:646,184:660},25:{150:425,152:439,154:453,156:467,158:481,160:495,162:509,164:523,166:537,168:551,170:565,172:579,174:593,176:606,178:620,180:634,182:648,184:662},26:{150:429,152:443,154:457,156:471,158:485,160:498,162:512,164:526,166:540,168:554,170:567,172:581,174:595,176:609,178:623,180:636,182:650,184:664},27:{150:433,152:447,154:460,156:474,158:488,160:501,162:515,164:529,166:543,168:556,170:570,172:584,174:597,176:611,178:625,180:638,182:652,184:666},28:{150:437,152:450,154:464,156:477,158:491,160:504,162:518,164:531,166:545,168:559,170:572,172:586,174:599,176:613,178:626,180:640,182:654,184:667},29:{150:440,152:453,154:467,156:480,158:494,160:507,162:520,164:534,166:547,168:561,170:574,172:588,174:601,176:615,178:628,180:641,182:655,184:668},30:{150:443,152:456,154:470,156:483,158:496,160:509,162:523,164:536,166:549,168:563,170:576,172:589,174:603,176:616,178:629,180:643,182:656,184:669},31:{150:446,152:459,154:472,156:485,158:498,160:512,162:525,164:538,166:551,168:564,170:578,172:591,174:604,176:617,178:630,180:644,182:657,184:670},32:{150:448,152:461,154:474,156:488,158:501,160:514,162:527,164:540,166:553,168:566,170:579,172:592,174:605,176:618,178:631,180:645,182:658,184:671},33:{150:451,152:464,154:477,156:490,158:503,160:516,162:528,164:541,166:554,168:567,170:580,172:593,174:606,176:619,178:632,180:645,182:658,184:671},34:{150:453,152:466,154:479,156:491,158:504,160:517,162:530,164:543,166:556,168:568,170:581,172:594,174:607,176:620,178:633,180:645,182:658,184:671},35:{150:455,152:468,154:480,156:493,158:506,160:518,162:531,164:544,166:557,168:569,170:582,172:595,174:608,176:620,178:633,180:646,182:658,184:671},36:{150:457,152:469,154:482,156:494,158:507,160:520,162:532,164:545,166:557,168:570,170:583,172:595,174:608,176:620,178:633,180:646,182:658,184:671},37:{150:458,152:471,154:483,156:496,158:508,160:521,162:533,164:546,166:558,168:570,170:583,172:595,174:608,176:620,178:633,180:645,182:658,184:670},38:{150:459,152:472,154:484,156:497,158:509,160:521,162:534,164:546,166:558,168:571,170:583,172:595,174:608,176:620,178:633,180:645,182:657,184:670},39:{150:461,152:473,154:485,156:497,158:510,160:522,162:534,164:546,166:558,168:571,170:583,172:595,174:607,176:620,178:632,180:644,182:656,184:669},40:{150:461,152:474,154:486,156:498,158:510,160:522,162:534,164:546,166:558,168:571,170:583,172:595,174:607,176:619,178:631,180:643,182:655,184:668},41:{150:462,152:474,154:486,156:498,158:510,160:522,162:534,164:546,166:558,168:570,170:582,172:594,174:606,176:618,178:630,180:642,182:654,184:666},42:{150:463,152:474,154:486,156:498,158:510,160:522,162:534,164:546,166:558,168:570,170:581,172:593,174:605,176:617,178:629,180:641,182:653,184:665},43:{150:463,152:475,154:486,156:498,158:510,160:522,162:533,164:545,166:557,168:569,170:580,172:592,174:604,176:616,178:627,180:639,182:651,184:663},44:{150:463,152:474,154:486,156:498,158:509,160:521,162:533,164:544,166:556,168:568,170:579,172:591,174:603,176:614,178:626,180:637,182:649,184:661},45:{150:463,152:474,154:486,156:497,158:509,160:520,162:532,164:543,166:555,168:566,170:578,172:589,174:601,176:612,178:624,180:635,182:647,184:659},46:{150:462,152:474,154:485,156:496,158:508,160:519,162:531,164:542,166:553,168:565,170:576,172:588,174:599,176:610,178:622,180:633,182:645,184:656},47:{150:462,152:473,154:484,156:495,158:507,160:518,162:529,164:541,166:552,168:563,170:574,172:586,174:597,176:608,178:620,180:631,182:642,184:653},48:{150:461,152:472,154:483,156:494,158:505,160:517,162:528,164:539,166:550,168:561,170:572,172:584,174:595,176:606,178:617,180:628,182:639,184:651},49:{150:460,152:471,154:482,156:493,158:504,160:515,162:526,164:537,166:548,168:559,170:570,172:581,174:592,176:603,178:614,180:625,182:636,184:647},50:{150:458,152:469,154:480,156:491,158:502,160:513,162:524,164:535,166:546,168:557,170:568,172:579,174:590,176:600,178:611,180:622,182:633,184:644},51:{150:457,152:468,154:479,156:489,158:500,160:511,162:522,164:533,166:543,168:554,170:565,172:576,174:587,176:597,178:608,180:619,182:630,184:641},52:{150:455,152:466,154:477,156:487,158:498,160:509,162:519,164:530,166:541,168:551,170:562,172:573,174:583,176:594,178:605,180:615,182:626,184:637},53:{150:453,152:464,154:474,156:485,158:496,160:506,162:517,164:527,166:538,168:548,170:559,172:570,174:580,176:591,178:601,180:612,182:622,184:633},54:{150:451,152:462,154:472,156:483,158:493,160:503,162:514,164:524,166:535,168:545,170:556,172:566,174:576,176:587,178:597,180:608,182:618,184:629},55:{150:449,152:459,154:470,156:480,158:490,160:500,162:511,164:521,166:531,168:542,170:552,172:562,174:573,176:583,178:593,180:604,182:614,184:624},56:{150:446,152:456,154:467,156:477,158:487,160:497,162:507,164:518,166:528,168:538,170:548,172:558,174:569,176:579,178:589,180:599,182:609,184:620},57:{150:444,152:454,154:464,156:474,158:484,160:494,162:504,164:514,166:524,168:534,170:544,172:554,174:564,176:575,178:585,180:595,182:605,184:615},58:{150:441,152:450,154:460,156:470,158:480,160:490,162:500,164:510,166:520,168:530,170:540,172:550,174:560,176:570,178:580,180:590,182:600,184:610},59:{150:437,152:447,154:457,156:467,158:477,160:486,162:496,164:506,166:516,168:526,170:536,172:546,174:555,176:565,178:575,180:585,182:595,184:605},60:{150:434,152:444,154:453,156:463,158:473,160:482,162:492,164:502,166:512,168:521,170:531,172:541,174:551,176:560,178:570,180:580,182:589,184:599},61:{150:430,152:440,154:449,156:459,158:469,160:478,162:488,164:497,166:507,168:517,170:526,172:536,174:545,176:555,178:565,180:574,182:584,184:593},62:{150:426,152:436,154:445,156:455,158:464,160:474,162:483,164:493,166:502,168:512,170:521,172:531,174:540,176:550,178:559,180:569,182:578,184:588},63:{150:422,152:432,154:441,156:450,158:460,160:469,162:478,164:488,166:497,168:507,170:516,172:525,174:535,176:544,178:553,180:563,182:572,184:581},64:{150:418,152:427,154:436,156:446,158:455,160:464,162:473,164:483,166:492,168:501,170:510,172:520,174:529,176:538,178:547,180:557,182:566,184:575},65:{150:413,152:423,154:432,156:441,158:450,160:459,162:468,164:477,166:486,168:496,170:505,172:514,174:523,176:532,178:541,180:550,182:559,184:569},66:{150:409,152:418,154:427,156:436,158:445,160:454,162:463,164:472,166:481,168:490,170:499,172:508,174:517,176:526,178:535,180:544,182:553,184:562},67:{150:404,152:413,154:422,156:430,158:439,160:448,162:457,164:466,166:475,168:484,170:493,172:501,174:510,176:519,178:528,180:537,182:546,184:555},68:{150:399,152:407,154:416,156:425,158:434,160:442,162:451,164:460,166:469,168:477,170:486,172:495,174:504,176:513,178:521,180:530,182:539,184:548},69:{150:393,152:402,154:411,156:419,158:428,160:436,162:445,164:454,166:462,168:471,170:480,172:488,174:497,176:506,178:514,180:523,182:531,184:540},70:{150:388,152:396,154:405,156:413,158:422,160:430,162:439,164:447,166:456,168:464,170:473,172:481,174:490,176:498,178:507,180:515,182:524,184:533},71:{150:382,152:390,154:399,156:407,158:415,160:424,162:432,164:441,166:449,168:457,170:466,172:474,174:483,176:491,178:499,180:508,182:516,184:525},72:{150:376,152:384,154:392,156:401,158:409,160:417,162:426,164:434,166:442,168:450,170:459,172:467,174:475,176:483,178:492,180:500,182:508,184:517},73:{150:370,152:378,154:386,156:394,158:402,160:410,162:419,164:427,166:435,168:443,170:451,172:459,174:468,176:476,178:484,180:492,182:500,184:508},74:{150:363,152:371,154:379,156:387,158:395,160:403,162:411,164:419,166:427,168:435,170:444,172:452,174:460,176:468,178:476,180:484,182:492,184:500},75:{150:356,152:364,154:372,156:380,158:388,160:396,162:404,164:412,166:420,168:428,170:436,172:444,174:452,176:459,178:467,180:475,182:483,184:491},76:{150:350,152:357,154:365,156:373,158:381,160:389,162:396,164:404,166:412,168:420,170:428,172:435,174:443,176:451,178:459,180:467,182:474,184:482},77:{150:342,152:350,154:358,156:366,158:373,160:381,162:389,164:396,166:404,168:412,170:419,172:427,174:435,176:442,178:450,180:458,182:465,184:473},78:{150:335,152:343,154:350,156:358,158:365,160:373,162:381,164:388,166:396,168:403,170:411,172:418,174:426,176:433,178:441,180:449,182:456,184:464},79:{150:328,152:335,154:342,156:350,158:357,160:365,162:372,164:380,166:387,168:395,170:402,172:409,174:417,176:424,178:432,180:439,182:447,184:454},80:{150:320,152:327,154:335,156:342,158:349,160:356,162:364,164:371,166:378,168:386,170:393,172:400,174:408,176:415,178:422,180:430,182:437,184:444},81:{150:312,152:319,154:326,156:333,158:341,160:348,162:355,164:362,166:369,168:377,170:384,172:391,174:398,176:405,178:413,180:420,182:427,184:434},82:{150:304,152:311,154:318,156:325,158:332,160:339,162:346,164:353,166:360,168:367,170:375,172:382,174:389,176:396,178:403,180:410,182:417,184:424},83:{150:295,152:302,154:309,156:316,158:323,160:330,162:337,164:344,166:351,168:358,170:365,172:372,174:379,176:386,178:393,180:400,182:407,184:414},84:{150:287,152:294,154:300,156:307,158:314,160:321,162:328,164:335,166:341,168:348,170:355,172:362,174:369,176:376,178:382,180:389,182:396,184:403},85:{150:278,152:285,154:291,156:298,158:305,160:311,162:318,164:325,166:332,168:338,170:345,172:352,174:359,176:365,178:372,180:379,182:385,184:392},86:{150:269,152:275,154:282,156:289,158:295,160:302,162:308,164:315,166:322,168:328,170:335,172:341,174:348,176:355,178:361,180:368,182:374,184:381},87:{150:260,152:266,154:273,156:279,158:285,160:292,162:298,164:305,166:311,168:318,170:324,172:331,174:337,176:344,178:350,180:357,182:363,184:370},88:{150:250,152:256,154:263,156:269,158:276,160:282,162:288,164:295,166:301,168:307,170:314,172:320,174:326,176:333,178:339,180:345,182:352,184:358},89:{150:240,152:247,154:253,156:259,158:265,160:272,162:278,164:284,166:290,168:297,170:303,172:309,174:315,176:321,178:328,180:334,182:340,184:346},90:{150:230,152:237,154:243,156:249,158:255,160:261,162:267,164:273,166:279,168:286,170:292,172:298,174:304,176:310,178:316,180:322,182:328,184:335},91:{150:220,152:226,154:232,156:238,158:244,160:250,162:256,164:262,166:268,168:274,170:280,172:286,174:292,176:298,178:304,180:310,182:316,184:322},92:{150:210,152:216,154:222,156:228,158:234,160:239,162:245,164:251,166:257,168:263,170:269,172:275,174:281,176:286,178:292,180:298,182:304,184:310},93:{150:199,152:205,154:211,156:217,158:222,160:228,162:234,164:240,166:246,168:251,170:257,172:263,174:269,176:274,178:280,180:286,182:292,184:297},94:{150:189,152:194,154:200,156:206,158:211,160:217,162:222,164:228,166:234,168:239,170:245,172:251,174:256,176:262,178:268,180:273,182:279,184:285},95:{150:178,152:183,154:189,156:194,158:200,160:205,162:211,164:216,166:222,168:227,170:233,172:238,174:244,176:249,178:255,180:260,182:266,184:272},96:{150:166,152:172,154:177,156:183,158:188,160:193,162:199,164:204,166:210,168:215,170:220,172:226,174:231,176:237,178:242,180:247,182:253,184:258},97:{150:155,152:160,154:166,156:171,158:176,160:181,162:187,164:192,166:197,168:203,170:208,172:213,174:218,176:224,178:229,180:234,182:240,184:245},98:{150:143,152:149,154:154,156:159,158:164,160:169,162:174,164:180,166:185,168:190,170:195,172:200,174:205,176:210,178:216,180:221,182:226,184:231},99:{150:132,152:137,154:142,156:147,158:152,160:157,162:162,164:167,166:172,168:177,170:182,172:187,174:192,176:197,178:202,180:207,182:212,184:217},100:{150:121,152:124,154:129,156:134,158:139,160:144,162:149,164:154,166:159,168:164,170:169,172:174,174:178,176:183,178:188,180:193,182:198,184:203}}
-        };
+        };
+        
+        // --- Global State & UI Elements ---
+        let app, auth, db;
+        let currentUser = null;
+        let currentUserRole = 'user'; // Default role
+        let currentPatientId = null;
+        let currentPatientData = null; 
+        let visitsUnsubscribe = null;
+        let patientsUnsubscribe = null;
+        let usersUnsubscribe = null;
+        let allPatientsData = [];
+        let allVisitsData = []; 
+        let confirmCallback = null;
+        let pefrChartInstance = null;
+        let controlRateChartInstance = null;
+        let icsRateChartInstance = null;
+
+        const allUI = {};
+
+        function populateUiElements() {
+        Object.assign(allUI, {
+            loadingView: document.getElementById('loading-view'),
+            loginView: document.getElementById('login-view'),
+            mainAppView: document.getElementById('main-app-view'),
+            authForm: document.getElementById('auth-form'),
+            authError: document.getElementById('auth-error'),
+            logoutBtn: document.getElementById('logout-btn'),
+            userDisplay: document.getElementById('user-display'),
+            userRole: document.getElementById('user-role'),
+            navPatients: document.getElementById('nav-patients'),
+            navDashboard: document.getElementById('nav-dashboard'),
+            navUsersAdmin: document.getElementById('nav-users-admin'),
+            patientManagementView: document.getElementById('patient-management-view'),
+            dashboardView: document.getElementById('dashboard-view'),
+            userManagementView: document.getElementById('user-management-view'),
+            patientModal: document.getElementById('patientModal'),
+            closePatientModal: document.getElementById('closePatientModal'),
+            patientForm: document.getElementById('patientForm'),
+            patientModalTitle: document.getElementById('patientModalTitle'),
+            addVisitModal: document.getElementById('addVisitModal'),
+            closeVisitModal: document.getElementById('closeVisitModal'),
+            addVisitForm: document.getElementById('addVisitForm'),
+            visitModalTitle: document.getElementById('visitModalTitle'),
+            patientList: document.getElementById('patientList'),
+            patientDetailView: document.getElementById('patientDetailView'),
+            emptyState: document.getElementById('empty-state'),
+            detailContent: document.getElementById('detail-content'),
+            patientLoading: document.getElementById('patient-loading'),
+            messageBox: document.getElementById('messageBox'),
+            messageText: document.getElementById('messageText'),
+            searchInput: document.getElementById('searchInput'),
+            confirmModal: document.getElementById('confirmModal'),
+            confirmModalText: document.getElementById('confirmModalText'),
+            confirmBtn: document.getElementById('confirmBtn'),
+            cancelBtn: document.getElementById('cancelBtn'),
+            importCsvBtn: document.getElementById('importCsvBtn'),
+            csvFileInput: document.getElementById('csvFileInput'),
+            dashboardLoading: document.getElementById('dashboard-loading'),
+            dashboardContent: document.getElementById('dashboard-content'),
+            addUserBtn: document.getElementById('addUserBtn'),
+            userModal: document.getElementById('userModal'),
+            userForm: document.getElementById('userForm'),
+            actionPlanModal: document.getElementById('actionPlanModal'),
+        });
+        }
+        
+        // --- Functions ---
+        
+        function showMessage(message, isError = false) {
+            allUI.messageText.textContent = message;
+            allUI.messageBox.classList.remove('hidden', 'bg-green-500', 'bg-red-500');
+            allUI.messageBox.classList.add(isError ? 'bg-red-500' : 'bg-green-500');
+            setTimeout(() => { allUI.messageBox.classList.add('hidden'); }, 3000);
+        }
         
-        // --- Global State & UI Elements ---
-        let app, auth, db;
-        let currentUser = null;
-        let currentUserRole = 'user'; // Default role
-        let currentPatientId = null;
-        let currentPatientData = null; 
-        let visitsUnsubscribe = null;
-        let patientsUnsubscribe = null;
-        let usersUnsubscribe = null;
-        let allPatientsData = [];
-        let allVisitsData = []; 
-        let confirmCallback = null;
-        let pefrChartInstance = null;
-        let controlRateChartInstance = null;
-        let icsRateChartInstance = null;
-        let isLoginMode = true;
-
-        const allUI = {};
-
-        function populateUiElements() {
-            allUI.loadingView = document.getElementById('loading-view');
-            allUI.loginView = document.getElementById('login-view');
-            allUI.mainAppView = document.getElementById('main-app-view');
-            allUI.authForm = document.getElementById('auth-form');
-            allUI.authTitle = document.getElementById('auth-title');
-            allUI.authSubmitBtn = document.getElementById('auth-submit-btn');
-            allUI.authError = document.getElementById('auth-error');
-            allUI.logoutBtn = document.getElementById('logout-btn');
-            allUI.userEmail = document.getElementById('user-email');
-            allUI.userRole = document.getElementById('user-role');
-            allUI.navPatients = document.getElementById('nav-patients');
-            allUI.navDashboard = document.getElementById('nav-dashboard');
-            allUI.navUsersAdmin = document.getElementById('nav-users-admin');
-            allUI.patientManagementView = document.getElementById('patient-management-view');
-            allUI.dashboardView = document.getElementById('dashboard-view');
-            allUI.userManagementView = document.getElementById('user-management-view');
-            allUI.openAddPatientModalBtn = document.getElementById('openAddPatientModalBtn');
-            allUI.patientModal = document.getElementById('patientModal');
-            allUI.closePatientModal = document.getElementById('closePatientModal');
-            allUI.patientForm = document.getElementById('patientForm');
-            allUI.patientModalTitle = document.getElementById('patientModalTitle');
-            allUI.addVisitModal = document.getElementById('addVisitModal');
-            allUI.closeVisitModal = document.getElementById('closeVisitModal');
-            allUI.addVisitForm = document.getElementById('addVisitForm');
-            allUI.visitModalTitle = document.getElementById('visitModalTitle');
-            allUI.patientList = document.getElementById('patientList');
-            allUI.patientDetailView = document.getElementById('patientDetailView');
-            allUI.emptyState = document.getElementById('empty-state');
-            allUI.detailContent = document.getElementById('detail-content');
-            allUI.patientLoading = document.getElementById('patient-loading');
-            allUI.messageBox = document.getElementById('messageBox');
-            allUI.messageText = document.getElementById('messageText');
-            allUI.searchInput = document.getElementById('searchInput');
-            allUI.confirmModal = document.getElementById('confirmModal');
-            allUI.confirmModalText = document.getElementById('confirmModalText');
-            allUI.confirmBtn = document.getElementById('confirmBtn');
-            allUI.cancelBtn = document.getElementById('cancelBtn');
-            allUI.importCsvBtn = document.getElementById('importCsvBtn');
-            allUI.csvFileInput = document.getElementById('csvFileInput');
-        }
-        
-        // --- Functions ---
-        
-        function showMessage(message, isError = false) {
-            allUI.messageText.textContent = message;
-            allUI.messageBox.classList.remove('hidden', 'bg-green-500', 'bg-red-500');
-            allUI.messageBox.classList.add(isError ? 'bg-red-500' : 'bg-green-500');
-            setTimeout(() => { allUI.messageBox.classList.add('hidden'); }, 3000);
-        }
-
-        function showConfirmModal(message, onConfirm) {
-            allUI.confirmModalText.textContent = message;
-            confirmCallback = onConfirm;
-            allUI.confirmModal.classList.remove('hidden');
-            allUI.confirmModal.classList.add('flex');
-        }
-
-        function calculateAge(birthDateString) {
-            if (!birthDateString) return null;
-            const birthDate = new Date(birthDateString);
-            const today = new Date();
-            let age = today.getFullYear() - birthDate.getFullYear();
-            const m = today.getMonth() - birthDate.getMonth();
-            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-                age--;
-            }
-            return age;
-        }
-        
-        function renderPatientList(patients) {
-            allUI.patientLoading.classList.add('hidden');
-            if (patients.length === 0) {
-                allUI.patientList.innerHTML = `<p class="p-4 text-center text-gray-500">ไม่พบผู้ป่วย</p>`;
-                return;
-            }
-
-            const canDelete = currentUserRole === 'admin' || currentUserRole === 'moderator';
-
-            allUI.patientList.innerHTML = patients.map(patient => `
-                <div class="patient-item-container flex items-center justify-between p-4 border-b hover:bg-blue-50 transition group ${patient.id === currentPatientId ? 'bg-blue-100' : ''}">
-                    <div class="patient-item-info cursor-pointer flex-grow" data-id="${patient.id}">
-                        <h3 class="font-bold text-gray-800">${patient.name}</h3>
-                        <p class="text-sm text-gray-600">HN: ${patient.hn}</p>
-                        ${currentUserRole === 'admin' && patient.ownerEmail ? `<p class="text-xs text-blue-500 pt-1">Owner: ${patient.ownerEmail}</p>` : ''}
-                    </div>
-                    ${canDelete ? `
-                    <button class="delete-patient-btn text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity p-2" data-id="${patient.id}" data-name="${patient.name}" title="ลบผู้ป่วย">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>` : ''}
-                </div>
-            `).join('');
-        }
-        
-        function filterAndRenderPatients() {
-            const searchTerm = allUI.searchInput.value.toLowerCase().trim();
-            const filteredPatients = !searchTerm ? allPatientsData : allPatientsData.filter(p => 
-                p.name.toLowerCase().includes(searchTerm) || p.hn.toLowerCase().includes(searchTerm)
-            );
-            renderPatientList(filteredPatients);
-        }
-
-        async function showPatientDetails(patientId) {
-            if (!db || !currentUser) return;
-            allUI.emptyState.classList.add('hidden');
-            allUI.detailContent.classList.remove('hidden');
-            allUI.detailContent.innerHTML = `<p class="text-center text-gray-500">กำลังโหลดรายละเอียดผู้ป่วย...</p>`;
-            try {
-                const patientRef = doc(db, "patients", patientId);
-                const patientSnap = await getDoc(patientRef);
-                if (!patientSnap.exists()) {
-                    allUI.detailContent.innerHTML = `<p class="text-center text-red-500">ไม่พบข้อมูลผู้ป่วย</p>`;
-                    return;
-                }
-                currentPatientData = patientSnap.data();
-                currentPatientData.id = patientId;
-                
-                const displayAge = calculateAge(currentPatientData.birthDate);
-
-                allUI.detailContent.innerHTML = `
-                    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-                        <div class="flex justify-between items-start flex-wrap gap-4">
-                             <div>
-                                <div class="flex items-center gap-4">
-                                    <h2 class="text-2xl font-bold text-blue-800">${currentPatientData.name}</h2>
-                                    <button id="openEditPatientModalBtn" class="text-blue-600 hover:text-blue-800 text-sm"><i class="fas fa-user-edit"></i> แก้ไขข้อมูล</button>
-                                </div>
-                                <p class="text-gray-600 mt-1">HN: ${currentPatientData.hn} | อายุ: ${displayAge ?? 'N/A'} ปี | เพศ: ${currentPatientData.gender} | สูง: ${currentPatientData.height || 'N/A'} ซม.</p>
-                            </div>
-                            <div class="flex gap-2">
-                                <button id="openAddVisitModalBtn" class="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition flex items-center">
-                                    <i class="fas fa-plus-circle mr-2"></i>เพิ่มการติดตาม
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-                         <h3 class="text-xl font-bold mb-4 text-gray-700">แนวโน้มค่า PEFR</h3>
-                         <div class="h-64">
-                            <canvas id="pefrChart"></canvas>
-                         </div>
-                    </div>
-                    <h3 class="text-xl font-bold mb-4 text-gray-700">ประวัติการติดตาม (Follow-up History)</h3>
-                    <div id="visit-list" class="space-y-4"></div>`;
-                
-                if (visitsUnsubscribe) visitsUnsubscribe();
-                const visitsRef = collection(db, `patients/${patientId}/visits`);
-                visitsUnsubscribe = onSnapshot(query(visitsRef), (snapshot) => {
-                    allVisitsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                    allVisitsData.sort((a, b) => new Date(b.visitDate) - new Date(a.visitDate));
-                    renderVisitList(allVisitsData);
-                    renderPefrChart(allVisitsData, currentPatientData);
-                });
-            } catch (error) {
-                console.error("Error fetching patient details:", error);
-                allUI.detailContent.innerHTML = `<p class="text-center text-red-500">เกิดข้อผิดพลาด</p>`;
-                showMessage("เกิดข้อผิดพลาดในการโหลดข้อมูล", true);
-            }
-        }
-        
-        function renderVisitList(visits) {
-            const visitListEl = document.getElementById('visit-list');
-            if (!visitListEl) return;
-            if (visits.length === 0) {
-                visitListEl.innerHTML = `<div class="bg-white p-6 rounded-lg text-center text-gray-500"><i class="fas fa-file-alt fa-2x mb-2 text-gray-400"></i><p>ยังไม่มีประวัติการติดตาม</p></div>`;
-                return;
-            }
-            
-            const getEacInterpretationBadge = (interpretation) => {
-                if (!interpretation) return '';
-                const styles = {
-                    'ควบคุมโรคได้ดี': 'bg-green-100 text-green-800',
-                    'ควบคุมโรคได้บางส่วน': 'bg-yellow-100 text-yellow-800',
-                    'ควบคุมโรคไม่ได้': 'bg-red-100 text-red-800'
-                };
-                return `<span class="text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full ${styles[interpretation] || ''}">${interpretation}</span>`;
-            };
-            const getTechniqueIcon = (tech) => tech === 'ถูกต้อง' ? `<i class="fas fa-check-circle text-green-500"></i>` : `<i class="fas fa-exclamation-triangle text-yellow-500"></i>`;
-            
-            visitListEl.innerHTML = visits.map(visit => `
-                <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
-                    <div class="flex justify-between items-center mb-3">
-                        <p class="font-bold text-lg text-gray-700">วันที่: ${new Date(visit.visitDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                        <div class="flex items-center">
-                            ${visit.eacScore != null ? `<span class="font-bold text-purple-700 mr-3">EAC: ${visit.eacScore}</span>` : ''}
-                            ${getEacInterpretationBadge(visit.eacInterpretation)}
-                            <button class="edit-visit-btn text-gray-500 hover:text-blue-600 ml-3 px-2" data-visit-id="${visit.id}" title="แก้ไขการติดตาม"><i class="fas fa-edit"></i></button>
-                            <button class="delete-visit-btn text-gray-500 hover:text-red-600 px-2" data-visit-id="${visit.id}" data-visit-date="${visit.visitDate}" title="ลบการติดตาม"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </div>
-                    ${visit.actualPEFR ? `<div class="mb-3 text-sm"><p class="font-semibold text-gray-600">PEFR: ${visit.actualPEFR} L/min (${visit.percentPredictedPEFR || 'N/A'}%)</p></div>` : ''}
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                        <div><p class="font-semibold text-gray-600">เทคนิคการใช้ยา: ${getTechniqueIcon(visit.inhalerTechnique)} ${visit.inhalerTechnique}</p>${visit.techniqueNotes ? `<p class="text-gray-500 pl-4">- ${visit.techniqueNotes}</p>` : ''}</div>
-                        <div><p class="font-semibold text-gray-600">Adherence: ${visit.adherence}</p></div>
-                        <div class="col-span-1 md:col-span-2"><p class="font-semibold text-gray-600">รายการยา: ${visit.isIcsPrescribed ? '<i class="fas fa-prescription-bottle-alt text-teal-500" title="มีการสั่งใช้ ICS"></i>' : ''}</p><pre class="bg-gray-50 p-2 rounded-md text-gray-700 whitespace-pre-wrap font-sans">${visit.medications || 'ไม่มีข้อมูล'}</pre></div>
-                        <div class="col-span-1 md:col-span-2"><p class="font-semibold text-gray-600">อาการไม่พึงประสงค์:</p><p class="text-gray-700">${visit.sideEffects || 'ไม่มี'}</p></div>
-                        <div class="col-span-1 md:col-span-2"><p class="font-semibold text-gray-600">ประเด็นที่ให้คำแนะนำ:</p><p class="text-gray-700">${visit.counselingNotes || 'ไม่มี'}</p></div>
-                    </div>
-                </div>`).join('');
-        }
-        
-        function renderPefrChart(visits, patientData) {
-            const chartCanvas = document.getElementById('pefrChart');
-            if (!chartCanvas) return;
-            
-            if (pefrChartInstance) {
-                pefrChartInstance.destroy();
-            }
-
-            const ctx = chartCanvas.getContext('2d');
-            
-            const pefrVisits = visits
-                .filter(v => v.actualPEFR)
-                .sort((a, b) => new Date(a.visitDate) - new Date(b.visitDate));
-
-            if (pefrVisits.length === 0) {
-                chartCanvas.parentElement.innerHTML = '<div class="bg-white p-6 rounded-lg shadow-md mb-6"><h3 class="text-xl font-bold mb-4 text-gray-700">แนวโน้มค่า PEFR</h3><p class="text-center text-gray-500 py-8">ไม่มีข้อมูล PEFR สำหรับแสดงผลกราฟ</p></div>';
-                return;
-            }
-
-            const labels = pefrVisits.map(v => new Date(v.visitDate).toLocaleDateString('th-TH'));
-            const actualData = pefrVisits.map(v => v.actualPEFR);
-            const predictedPefr = calculatePredictedPEFR(patientData);
-            const predictedData = predictedPefr ? pefrVisits.map(() => predictedPefr) : [];
-
-            pefrChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'PEFR ที่วัดได้ (L/min)',
-                            data: actualData,
-                            borderColor: 'rgb(59, 130, 246)',
-                            backgroundColor: 'rgba(59, 130, 246, 0.5)',
-                            tension: 0.1,
-                            fill: false,
-                        },
-                        {
-                            label: 'PEFR มาตรฐาน (Predicted)',
-                            data: predictedData,
-                            borderColor: 'rgb(156, 163, 175)',
-                            borderDash: [5, 5],
-                            fill: false,
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'top' }, title: { display: false } },
-                    scales: { y: { beginAtZero: true } }
-                }
-            });
-        }
-
-        function calculatePredictedPEFR(patient) {
-            if (!patient?.height || !patient?.birthDate || !patient?.gender) return null;
-
-            const H = Math.round(patient.height);
-            const A = calculateAge(patient.birthDate);
-            if (A === null) return null;
-            
-            const gender = patient.gender;
-
-            if (A < 15) {
-                const childPefr = pefrData.children[H];
-                if (childPefr) return childPefr;
-                return Math.round(-425.5714 + (5.2428 * H));
-            }
-
-            const roundedHeight = Math.round(H / 2) * 2;
-            const genderData = gender === 'ชาย' ? pefrData.male : pefrData.female;
-
-            if (genderData && genderData[A] && genderData[A][roundedHeight]) {
-                return genderData[A][roundedHeight];
-            }
-
-            let pefr = (gender === 'ชาย') ? (6.14 * H) - (0.043 * A) - 499 : (3.76 * H) - (0.026 * A) - 201;
-            return pefr > 0 ? Math.round(pefr) : null;
-        }
-        
-        function calculateAndDisplayEacScore() {
-            let totalScore = 0;
-            const eacQuestionsContainer = document.getElementById('eacQuestionsContainer');
-            if (!eacQuestionsContainer) return;
-            
-            eacQuestionsContainer.querySelectorAll('.eac-question').forEach(q => {
-                totalScore += Number(q.value) || 0;
-            });
-            eacQuestionsContainer.querySelectorAll('.eac-event-question').forEach(q => {
-                if (q.value === '1') {
-                    const timesInput = document.getElementById(q.dataset.timesInput);
-                    totalScore += Number(timesInput.value) || 0;
-                }
-            });
-            
-            const scoreDisplay = document.getElementById('eacScoreDisplay');
-            const interpretationDisplay = document.getElementById('eacInterpretationDisplay');
-            
-            if (scoreDisplay) scoreDisplay.textContent = totalScore;
-            
-            if(interpretationDisplay) {
-                let interpretation = '';
-                let interpretationColor = '';
-                if (totalScore === 0) {
-                    interpretation = 'ควบคุมโรคได้ดี';
-                    interpretationColor = 'text-green-700';
-                } else if (totalScore >= 1 && totalScore <= 2) {
-                    interpretation = 'ควบคุมโรคได้บางส่วน';
-                    interpretationColor = 'text-yellow-700';
-                } else {
-                    interpretation = 'ควบคุมโรคไม่ได้';
-                    interpretationColor = 'text-red-700';
-                }
-                interpretationDisplay.textContent = interpretation;
-                interpretationDisplay.className = `text-sm font-semibold mt-1 ${interpretationColor}`;
-            }
-        }
-
-        function openAddPatientModal() {
-            allUI.patientForm.reset();
-            allUI.patientForm.querySelector('#patientId').value = '';
-            allUI.patientModalTitle.textContent = 'เพิ่มข้อมูลผู้ป่วยใหม่';
-            allUI.patientModal.classList.remove('hidden');
-            allUI.patientModal.classList.add('flex');
-        }
-
-        function openEditPatientModal() {
-            if (!currentPatientData || !currentPatientId) return;
-            allUI.patientForm.reset();
-            allUI.patientModalTitle.textContent = 'แก้ไขข้อมูลผู้ป่วย';
-            
-            allUI.patientForm.querySelector('#patientId').value = currentPatientId;
-            allUI.patientForm.querySelector('#hn').value = currentPatientData.hn;
-            allUI.patientForm.querySelector('#name').value = currentPatientData.name;
-            allUI.patientForm.querySelector('#birthDate').value = currentPatientData.birthDate;
-            allUI.patientForm.querySelector('#height').value = currentPatientData.height;
-            allUI.patientForm.querySelector('#gender').value = currentPatientData.gender;
-            
-            allUI.patientModal.classList.remove('hidden');
-            allUI.patientModal.classList.add('flex');
-        }
-
-        function openAddVisitModal() {
-            allUI.addVisitForm.reset();
-            document.getElementById('visitId').value = '';
-            document.getElementById('visitModalTitle').textContent = 'บันทึกการติดตาม (Follow-up)';
-            document.getElementById('visitDate').valueAsDate = new Date();
-            document.getElementById('nextAppointmentDate').value = currentPatientData.nextAppointmentDate || '';
-            const predicted = calculatePredictedPEFR(currentPatientData);
-            document.getElementById('predictedPEFR').value = predicted ? `${predicted} L/min` : 'N/A';
-            calculateAndDisplayEacScore();
-            allUI.addVisitModal.classList.remove('hidden');
-            allUI.addVisitModal.classList.add('flex');
-        }
-
-        function openEditVisitModal(visitData) {
-            allUI.addVisitForm.reset();
-            document.getElementById('visitId').value = visitData.id;
-            document.getElementById('visitModalTitle').textContent = 'แก้ไขการติดตาม';
-            ['visitDate', 'controlLevel', 'adherence', 'inhalerTechnique', 'techniqueNotes', 'medications', 'sideEffects', 'counselingNotes', 'actualPEFR', 'isIcsPrescribed'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el.type === 'checkbox') {
-                    el.checked = visitData[id] || false;
-                } else {
-                    el.value = visitData[id] || '';
-                }
-            });
-            document.getElementById('nextAppointmentDate').value = currentPatientData.nextAppointmentDate || '';
-            ['eacQ1', 'eacQ2', 'eacQ3', 'eacQ4', 'eacQ5'].forEach(id => {
-                document.getElementById(id).value = visitData[id] || '0';
-            });
-            const predicted = calculatePredictedPEFR(currentPatientData);
-            document.getElementById('predictedPEFR').value = predicted ? `${predicted} L/min` : 'N/A';
-            document.getElementById('percentPredictedPEFR').value = visitData.percentPredictedPEFR ? `${visitData.percentPredictedPEFR}%` : '';
-            calculateAndDisplayEacScore();
-            allUI.addVisitModal.classList.remove('hidden');
-            allUI.addVisitModal.classList.add('flex');
-        }
-
-        async function deleteVisit(visitId) {
-            if (!db || !currentPatientId || !visitId) return;
-            try {
-                const visitDocRef = doc(db, `patients/${currentPatientId}/visits`, visitId);
-                await deleteDoc(visitDocRef);
-                showMessage("ลบประวัติการติดตามสำเร็จ");
-            } catch (error) {
-                console.error("Error deleting visit:", error);
-                showMessage("เกิดข้อผิดพลาดในการลบประวัติ", true);
-            }
-        }
-
-        async function deletePatient(patientId) {
-            if (!db || !patientId) return;
-            try {
-                const visitsRef = collection(db, `patients/${patientId}/visits`);
-                const visitsSnapshot = await getDocs(visitsRef);
-                const deletePromises = visitsSnapshot.docs.map(visitDoc => deleteDoc(visitDoc.ref));
-                await Promise.all(deletePromises);
-
-                const patientDocRef = doc(db, "patients", patientId);
-                await deleteDoc(patientDocRef);
-
-                showMessage("ลบผู้ป่วยและข้อมูลทั้งหมดสำเร็จ");
-
-                if (currentPatientId === patientId) {
-                    if (pefrChartInstance) pefrChartInstance.destroy();
-                    allUI.detailContent.classList.add('hidden');
-                    allUI.emptyState.classList.remove('hidden');
-                    currentPatientId = null;
-                    currentPatientData = null;
-                }
-            } catch (error) {
-                console.error("Error deleting patient:", error);
-                showMessage("เกิดข้อผิดพลาดในการลบผู้ป่วย", true);
-            }
-        }
-        
-        async function renderDashboard() {
-            if (!db || !currentUser) return;
-            allUI.dashboardLoading.style.display = 'block';
-            allUI.dashboardContent.style.display = 'none';
-            
-            document.getElementById('total-patients').textContent = allPatientsData.length;
-            
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            const todayString = today.toISOString().split('T')[0];
-
-            const appointmentsToday = allPatientsData.filter(p => p.nextAppointmentDate === todayString);
-            
-            const appointmentTitleEl = document.getElementById('appointment-title');
-            const appointmentInfoEl = document.getElementById('appointment-info');
-            const appointmentIconEl = document.getElementById('appointment-icon');
-
-            if (appointmentsToday.length > 0) {
-                appointmentTitleEl.textContent = 'นัดหมายวันนี้';
-                appointmentInfoEl.textContent = appointmentsToday.length;
-                appointmentInfoEl.className = 'text-4xl font-bold text-green-600';
-                appointmentIconEl.className = 'fas fa-calendar-check text-4xl text-green-500 mb-3';
-            } else {
-                const futureAppointments = allPatientsData
-                    .map(p => p.nextAppointmentDate)
-                    .filter(d => d && new Date(d) >= today)
-                    .sort();
-                
-                if (futureAppointments.length > 0) {
-                    const nextAppointmentDate = new Date(futureAppointments[0]);
-                    const nextDateCount = allPatientsData.filter(p => p.nextAppointmentDate === futureAppointments[0]).length;
-                    appointmentTitleEl.textContent = 'นัดหมายครั้งถัดไป';
-                    appointmentInfoEl.textContent = `${nextAppointmentDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })} (${nextDateCount} คน)`;
-                    appointmentInfoEl.className = 'text-3xl font-bold text-gray-800';
-                    appointmentIconEl.className = 'fas fa-calendar-alt text-4xl text-gray-500 mb-3';
-                } else {
-                    appointmentTitleEl.textContent = 'นัดหมาย';
-                    appointmentInfoEl.textContent = 'ไม่มี';
-                     appointmentInfoEl.className = 'text-4xl font-bold text-gray-400';
-                    appointmentIconEl.className = 'fas fa-calendar-times text-4xl text-gray-400 mb-3';
-                }
-            }
-
-
-            const latestVisitsPromises = allPatientsData.map(patient => {
-                const visitsRef = collection(db, `patients/${patient.id}/visits`);
-                const q = query(visitsRef, orderBy('visitDate', 'desc'), limit(1));
-                return getDocs(q);
-            });
-
-            const snapshots = await Promise.all(latestVisitsPromises);
-            const latestVisits = snapshots.map(snapshot => snapshot.empty ? null : snapshot.docs[0].data()).filter(Boolean);
-            
-            const controlCounts = { 'ควบคุมโรคได้ดี': 0, 'ควบคุมโรคได้บางส่วน': 0, 'ควบคุมโรคไม่ได้': 0 };
-            latestVisits.forEach(visit => {
-                if(visit.eacInterpretation && controlCounts.hasOwnProperty(visit.eacInterpretation)) {
-                    controlCounts[visit.eacInterpretation]++;
-                }
-            });
-
-            const icsCounts = { withIcs: 0, withoutIcs: 0 };
-            latestVisits.forEach(visit => {
-                if (visit.isIcsPrescribed) {
-                    icsCounts.withIcs++;
-                } else {
-                    icsCounts.withoutIcs++;
-                }
-            });
-
-            renderDoughnutChart('controlRateChart', 'อัตราการควบคุมโรค', Object.keys(controlCounts), Object.values(controlCounts), ['#22c55e', '#facc15', '#ef4444']);
-            renderDoughnutChart('icsRateChart', 'สัดส่วนการใช้ ICS', ['ได้รับ ICS', 'ไม่ได้รับ ICS'], Object.values(icsCounts), ['#3b82f6', '#9ca3af']);
-
-            allUI.dashboardLoading.style.display = 'none';
-            allUI.dashboardContent.style.display = 'grid';
-        }
-
-        function renderDoughnutChart(canvasId, label, labels, data, colors) {
-            const chartCanvas = document.getElementById(canvasId);
-            if (!chartCanvas) return;
-            
-            const existingChart = Chart.getChart(canvasId);
-            if (existingChart) {
-                existingChart.destroy();
-            }
-
-            new Chart(chartCanvas.getContext('2d'), {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: label,
-                        data: data,
-                        backgroundColor: colors,
-                        hoverOffset: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                        }
-                    }
-                }
-            });
-        }
-        
-        function showView(viewName) {
-            allUI.patientManagementView.classList.add('hidden');
-            allUI.dashboardView.classList.add('hidden');
-            allUI.userManagementView.classList.add('hidden');
-            allUI.navPatients.classList.remove('active');
-            allUI.navDashboard.classList.remove('active');
-            if (allUI.navUsersAdmin) allUI.navUsersAdmin.classList.remove('active');
-
-            if (viewName === 'dashboard') {
-                allUI.dashboardView.classList.remove('hidden');
-                allUI.navDashboard.classList.add('active');
-                renderDashboard();
-            } else if (viewName === 'users-admin') {
-                allUI.userManagementView.classList.remove('hidden');
-                allUI.navUsersAdmin.classList.add('active');
-                listenToUsers();
-            } else {
-                allUI.patientManagementView.classList.remove('hidden');
-                allUI.navPatients.classList.add('active');
-            }
-        }
-        
-        // --- Event Listeners Setup ---
-        function setupEventListeners() {
-            document.body.addEventListener('click', handleGlobalClick);
-            allUI.authForm.addEventListener('submit', handleAuthFormSubmit);
-            allUI.logoutBtn.addEventListener('click', () => signOut(auth));
-            allUI.patientForm.addEventListener('submit', handlePatientFormSubmit);
-            allUI.addVisitForm.addEventListener('submit', handleVisitFormSubmit);
-            allUI.searchInput.addEventListener('input', filterAndRenderPatients);
-            allUI.importCsvBtn.addEventListener('click', () => allUI.csvFileInput.click());
-            allUI.csvFileInput.addEventListener('change', (e) => handleCsvImport(e.target.files[0]));
-        }
-        
-        // --- Single Click Handler ---
-        function handleGlobalClick(e) {
-            const target = e.target;
-            const closest = (selector) => target.closest(selector);
-
-            // Auth Toggle
-            if (e.target.id === 'show-signup-link') {
-                e.preventDefault();
-                toggleAuthMode(false);
-            }
-            if (e.target.id === 'show-login-link') {
-                e.preventDefault();
-                toggleAuthMode(true);
-            }
-
-            // Navigation
-            if (closest('#nav-patients')) { e.preventDefault(); showView('patients'); }
-            if (closest('#nav-dashboard')) { e.preventDefault(); showView('dashboard'); }
-            if (closest('#nav-users-admin')) { e.preventDefault(); showView('users-admin'); }
-
-            // Patient List Actions
-            const patientInfo = closest('.patient-item-info');
-            if (patientInfo) {
-                const patientId = patientInfo.dataset.id;
-                document.querySelectorAll('.patient-item-container').forEach(el => el.classList.remove('bg-blue-100'));
-                patientInfo.parentElement.classList.add('bg-blue-100');
-                currentPatientId = patientId;
-                showPatientDetails(currentPatientId);
-            }
-            const deletePatientBtn = closest('.delete-patient-btn');
-            if (deletePatientBtn) {
-                e.stopPropagation();
-                const patientId = deletePatientBtn.dataset.id;
-                const patientName = deletePatientBtn.dataset.name;
-                showConfirmModal(`คุณแน่ใจหรือไม่ว่าต้องการลบผู้ป่วย "${patientName}" และข้อมูลทั้งหมด?`, () => deletePatient(patientId));
-            }
-
-            // Detail View Actions
-            if (closest('#openAddVisitModalBtn')) { openAddVisitModal(); }
-            if (closest('#openEditPatientModalBtn')) { openEditPatientModal(); }
-            const editVisitBtn = closest('.edit-visit-btn');
-            if (editVisitBtn) {
-                const visitId = editVisitBtn.dataset.visitId;
-                const visitData = allVisitsData.find(v => v.id === visitId);
-                if (visitData) openEditVisitModal(visitData);
-            }
-            const deleteVisitBtn = closest('.delete-visit-btn');
-            if (deleteVisitBtn) {
-                const visitId = deleteVisitBtn.dataset.visitId;
-                const visitDate = new Date(deleteVisitBtn.dataset.visitDate).toLocaleDateString('th-TH');
-                showConfirmModal(`คุณแน่ใจหรือไม่ว่าต้องการลบการติดตามของวันที่ ${visitDate}?`, () => deleteVisit(visitId));
-            }
-            
-            // Modals & Global Actions
-            if (closest('#openAddPatientModalBtn')) { openAddPatientModal(); }
-            if (closest('#closePatientModal')) { allUI.patientModal.classList.add('hidden'); }
-            if (closest('#closeVisitModal')) { allUI.addVisitModal.classList.add('hidden'); }
-            if (closest('#confirmBtn')) { if (confirmCallback) confirmCallback(); allUI.confirmModal.classList.add('hidden'); }
-            if (closest('#cancelBtn')) { allUI.confirmModal.classList.add('hidden'); }
-        }
-
-        // --- Form Handlers ---
-        async function handleAuthFormSubmit(e) {
-            e.preventDefault();
-            const username = document.getElementById('auth-username').value;
-            const password = document.getElementById('auth-password').value;
-            let emailForAuth = `${username}@asthmaly.app`;
-
-            if (username.toLowerCase() === 'admin') {
-                emailForAuth = 'admin@system.local';
-            }
-
-            try {
-                await signInWithEmailAndPassword(auth, emailForAuth, password);
-                allUI.authError.classList.add('hidden');
-            } catch (error) {
-                console.error("Auth Error:", error.code);
-                showAuthError("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
-            }
-        }
-
-        async function handlePatientFormSubmit(e) {
-            e.preventDefault();
-            if (!db || !currentUser) return showMessage("ยังไม่ได้เชื่อมต่อ", true);
-            
-            const patientId = document.getElementById('patientId').value;
-            const patientData = {
-                hn: document.getElementById('hn').value.padStart(7, '0'),
-                name: document.getElementById('name').value,
-                birthDate: document.getElementById('birthDate').value, 
-                height: Number(document.getElementById('height').value),
-                gender: document.getElementById('gender').value,
-                updatedAt: new Date(),
-                ownerId: currentUser.uid,
-                ownerEmail: currentUser.email
-            };
-
-            try {
-                if (patientId) { // Edit mode
-                    const patientDocRef = doc(db, "patients", patientId);
-                    await updateDoc(patientDocRef, patientData);
-                    showMessage("แก้ไขข้อมูลผู้ป่วยสำเร็จ!");
-                    showPatientDetails(patientId);
-                } else { // Add mode
-                    patientData.createdAt = new Date();
-                    await addDoc(collection(db, "patients"), patientData);
-                    showMessage("เพิ่มผู้ป่วยสำเร็จ!");
-                }
-                allUI.patientForm.reset();
-                allUI.patientModal.classList.add('hidden');
-            } catch (error) {
-                console.error("Error saving patient:", error);
-                showMessage("เกิดข้อผิดพลาดในการบันทึกข้อมูลผู้ป่วย", true);
-            }
-        }
-
-        async function handleVisitFormSubmit(e) {
-            e.preventDefault();
-            if (!db || !currentPatientId) return showMessage("กรุณาเลือกผู้ป่วยก่อนบันทึก", true);
-            const visitId = document.getElementById('visitId').value;
-            const visitData = {
-                visitDate: document.getElementById('visitDate').value,
-                controlLevel: document.getElementById('controlLevel').value,
-                adherence: document.getElementById('adherence').value,
-                inhalerTechnique: document.getElementById('inhalerTechnique').value,
-                techniqueNotes: document.getElementById('techniqueNotes').value,
-                medications: document.getElementById('medications').value,
-                isIcsPrescribed: document.getElementById('isIcsPrescribed').checked,
-                sideEffects: document.getElementById('sideEffects').value,
-                counselingNotes: document.getElementById('counselingNotes').value,
-                actualPEFR: document.getElementById('actualPEFR').value ? Number(document.getElementById('actualPEFR').value) : null,
-                predictedPEFR: calculatePredictedPEFR(currentPatientData),
-                percentPredictedPEFR: document.getElementById('percentPredictedPEFR').value.replace('%', '') || null,
-                eacScore: Number(document.getElementById('eacScoreDisplay').textContent) || 0,
-                eacInterpretation: document.getElementById('eacInterpretationDisplay').textContent || '',
-                eacQ1: document.getElementById('eacQ1').value, 
-                eacQ2: document.getElementById('eacQ2').value,
-                eacQ3: document.getElementById('eacQ3').value, 
-                eacQ4: document.getElementById('eacQ4').value,
-                eacQ5: document.getElementById('eacQ5').value,
-                eacQ4_times: document.getElementById('eacQ4_times').value,
-                eacQ5_times: document.getElementById('eacQ5_times').value,
-                updatedAt: new Date()
-            };
-            try {
-                const nextAppointmentDate = document.getElementById('nextAppointmentDate').value;
-                if (nextAppointmentDate) {
-                    const patientDocRef = doc(db, "patients", currentPatientId);
-                    await updateDoc(patientDocRef, { nextAppointmentDate: nextAppointmentDate });
-                }
-
-                const visitCollectionRef = collection(db, `patients/${currentPatientId}/visits`);
-                if (visitId) {
-                    await updateDoc(doc(visitCollectionRef, visitId), visitData);
-                    showMessage("แก้ไขข้อมูลสำเร็จ!");
-                } else {
-                    visitData.createdAt = new Date();
-                    await addDoc(visitCollectionRef, visitData);
-                    showMessage("บันทึกการติดตามสำเร็จ!");
-                }
-                allUI.addVisitForm.reset();
-                allUI.addVisitModal.classList.add('hidden');
-            } catch (error) {
-                console.error("Error saving visit: ", error);
-                showMessage("เกิดข้อผิดพลาดในการบันทึก", true);
-            }
-        }
-        
-        // --- Initialization ---
-        async function handleUserSession(user) {
-            allUI.loadingView.style.display = 'none';
-            if (user) {
-                currentUser = user;
-                const userDocRef = doc(db, 'users', user.uid);
-                let userDoc = await getDoc(userDocRef);
-
-                if (!userDoc.exists()) {
-                    const newUserRole = user.email === 'admin@system.local' ? 'admin' : 'user';
-                    await setDoc(userDocRef, {
-                        email: user.email,
-                        role: newUserRole,
-                        createdAt: new Date()
-                    });
-                    currentUserRole = newUserRole;
-                } else {
-                    currentUserRole = userDoc.data().role || 'user';
-                }
-                
-                allUI.userEmail.textContent = user.email;
-                allUI.userRole.textContent = currentUserRole;
-                allUI.loginView.style.display = 'none';
-                allUI.mainAppView.style.display = 'block';
-                
-                if (currentUserRole === 'admin') {
-                    allUI.navUsersAdmin.classList.remove('hidden');
-                } else {
-                    allUI.navUsersAdmin.classList.add('hidden');
-                }
-
-                listenToPatients();
-            } else {
-                currentUser = null;
-                currentUserRole = 'user';
-                allUI.mainAppView.style.display = 'none';
-                allUI.loginView.style.display = 'flex';
-                if (patientsUnsubscribe) patientsUnsubscribe();
-                allPatientsData = [];
-                renderPatientList([]);
-            }
-        }
-
-        function toggleAuthMode(isLogin) {
-            isLoginMode = isLogin;
-            allUI.authTitle.textContent = isLogin ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก';
-            allUI.authSubmitBtn.textContent = isLogin ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก';
-            allUI.authError.classList.add('hidden');
-            allUI.authToggleContainer.innerHTML = isLogin 
-                ? `<p class="text-gray-600">ยังไม่มีบัญชี? <a href="#" id="show-signup-link" class="font-medium text-blue-600 hover:underline">สมัครสมาชิกที่นี่</a></p>`
-                : `<p class="text-gray-600">มีบัญชีอยู่แล้ว? <a href="#" id="show-login-link" class="font-medium text-blue-600 hover:underline">เข้าสู่ระบบที่นี่</a></p>`;
-        }
-
         function showAuthError(message) {
             allUI.authError.textContent = message;
             allUI.authError.classList.remove('hidden');
         }
 
-        function listenToPatients() {
-            if (patientsUnsubscribe) patientsUnsubscribe();
-            if (!currentUser) return;
+        function showConfirmModal(message, onConfirm) {
+            allUI.confirmModalText.textContent = message;
+            confirmCallback = onConfirm;
+            allUI.confirmModal.classList.remove('hidden');
+            allUI.confirmModal.classList.add('flex');
+        }
 
-            let q;
-            const patientsCollectionRef = collection(db, "patients");
+        function calculateAge(birthDateString) {
+            if (!birthDateString) return null;
+            const birthDate = new Date(birthDateString);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            return age;
+        }
+        
+        function renderPatientList(patients) {
+            allUI.patientLoading.classList.add('hidden');
+            if (patients.length === 0) {
+                allUI.patientList.innerHTML = `<p class="p-4 text-center text-gray-500">ไม่พบผู้ป่วย</p>`;
+                return;
+            }
 
-            if (currentUserRole === 'admin') {
-                q = query(patientsCollectionRef, orderBy('name'));
-            } else {
-                q = query(patientsCollectionRef, where("ownerId", "==", currentUser.uid), orderBy('name'));
+            const canDelete = currentUserRole === 'admin' || currentUserRole === 'moderator';
+
+            allUI.patientList.innerHTML = patients.map(patient => `
+                <div class="patient-item-container flex items-center justify-between p-4 border-b hover:bg-blue-50 transition group ${patient.id === currentPatientId ? 'bg-blue-100' : ''}">
+                    <div class="patient-item-info cursor-pointer flex-grow" data-id="${patient.id}">
+                        <h3 class="font-bold text-gray-800">${patient.name}</h3>
+                        <p class="text-sm text-gray-600">HN: ${patient.hn}</p>
+                        ${currentUserRole === 'admin' && patient.ownerEmail ? `<p class="text-xs text-blue-500 pt-1">Owner: ${patient.ownerEmail.split('@')[0]}</p>` : ''}
+                    </div>
+                    ${canDelete ? `
+                    <button class="delete-patient-btn text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity p-2" data-id="${patient.id}" data-name="${patient.name}" title="ลบผู้ป่วย">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>` : ''}
+                </div>
+            `).join('');
+        }
+        
+        function filterAndRenderPatients() {
+            const searchTerm = allUI.searchInput.value.toLowerCase().trim();
+            const filteredPatients = !searchTerm ? allPatientsData : allPatientsData.filter(p => 
+                p.name.toLowerCase().includes(searchTerm) || p.hn.toLowerCase().includes(searchTerm)
+            );
+            renderPatientList(filteredPatients);
+        }
+
+        async function showPatientDetails(patientId) {
+            if (!db || !currentUser) return;
+            allUI.emptyState.classList.add('hidden');
+            allUI.detailContent.classList.remove('hidden');
+            allUI.detailContent.innerHTML = `<p class="text-center text-gray-500">กำลังโหลดรายละเอียดผู้ป่วย...</p>`;
+            try {
+                const patientRef = doc(db, "patients", patientId);
+                const patientSnap = await getDoc(patientRef);
+                if (!patientSnap.exists()) {
+                    allUI.detailContent.innerHTML = `<p class="text-center text-red-500">ไม่พบข้อมูลผู้ป่วย</p>`;
+                    return;
+                }
+                currentPatientData = patientSnap.data();
+                currentPatientData.id = patientId;
+                
+                const displayAge = calculateAge(currentPatientData.birthDate);
+
+                allUI.detailContent.innerHTML = `
+                    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                        <div class="flex justify-between items-start flex-wrap gap-4">
+                             <div>
+                                 <div class="flex items-center gap-4">
+                                     <h2 class="text-2xl font-bold text-blue-800">${currentPatientData.name}</h2>
+                                     <button id="openEditPatientModalBtn" class="text-blue-600 hover:text-blue-800 text-sm"><i class="fas fa-user-edit"></i> แก้ไขข้อมูล</button>
+                                 </div>
+                                 <p class="text-gray-600 mt-1">HN: ${currentPatientData.hn} | อายุ: ${displayAge ?? 'N/A'} ปี | เพศ: ${currentPatientData.gender} | สูง: ${currentPatientData.height || 'N/A'} ซม.</p>
+                             </div>
+                            <div class="flex gap-2">
+                                <button id="printActionPlanBtn" class="bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition flex items-center">
+                                    <i class="fas fa-file-medical-alt mr-2"></i>พิมพ์ Action Plan
+                                </button>
+                                <button id="openAddVisitModalBtn" class="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition flex items-center">
+                                    <i class="fas fa-plus-circle mr-2"></i>เพิ่มการติดตาม
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                         <h3 class="text-xl font-bold mb-4 text-gray-700">แนวโน้มค่า PEFR</h3>
+                         <div class="h-64">
+                             <canvas id="pefrChart"></canvas>
+                         </div>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4 text-gray-700">ประวัติการติดตาม (Follow-up History)</h3>
+                    <div id="visit-list" class="space-y-4"></div>`;
+                
+                if (visitsUnsubscribe) visitsUnsubscribe();
+                const visitsRef = collection(db, `patients/${patientId}/visits`);
+                visitsUnsubscribe = onSnapshot(query(visitsRef), (snapshot) => {
+                    allVisitsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                    allVisitsData.sort((a, b) => new Date(b.visitDate) - new Date(a.visitDate));
+                    renderVisitList(allVisitsData);
+                    renderPefrChart(allVisitsData, currentPatientData);
+                });
+            } catch (error) {
+                console.error("Error fetching patient details:", error);
+                allUI.detailContent.innerHTML = `<p class="text-center text-red-500">เกิดข้อผิดพลาด</p>`;
+                showMessage("เกิดข้อผิดพลาดในการโหลดข้อมูล", true);
+            }
+        }
+        
+        function renderVisitList(visits) {
+            const visitListEl = document.getElementById('visit-list');
+            if (!visitListEl) return;
+            if (visits.length === 0) {
+                visitListEl.innerHTML = `<div class="bg-white p-6 rounded-lg text-center text-gray-500"><i class="fas fa-file-alt fa-2x mb-2 text-gray-400"></i><p>ยังไม่มีประวัติการติดตาม</p></div>`;
+                return;
+            }
+            
+            const getEacInterpretationBadge = (interpretation) => {
+                if (!interpretation) return '';
+                const styles = {
+                    'ควบคุมโรคได้ดี': 'bg-green-100 text-green-800',
+                    'ควบคุมโรคได้บางส่วน': 'bg-yellow-100 text-yellow-800',
+                    'ควบคุมโรคไม่ได้': 'bg-red-100 text-red-800'
+                };
+                return `<span class="text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full ${styles[interpretation] || ''}">${interpretation}</span>`;
+            };
+            const getTechniqueIcon = (tech) => tech === 'ถูกต้อง' ? `<i class="fas fa-check-circle text-green-500"></i>` : `<i class="fas fa-exclamation-triangle text-yellow-500"></i>`;
+            
+            visitListEl.innerHTML = visits.map(visit => `
+                <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                    <div class="flex justify-between items-center mb-3">
+                        <p class="font-bold text-lg text-gray-700">วันที่: ${new Date(visit.visitDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                        <div class="flex items-center">
+                            ${visit.eacScore != null ? `<span class="font-bold text-purple-700 mr-3">EAC: ${visit.eacScore}</span>` : ''}
+                            ${getEacInterpretationBadge(visit.eacInterpretation)}
+                            <button class="edit-visit-btn text-gray-500 hover:text-blue-600 ml-3 px-2" data-visit-id="${visit.id}" title="แก้ไขการติดตาม"><i class="fas fa-edit"></i></button>
+                            <button class="delete-visit-btn text-gray-500 hover:text-red-600 px-2" data-visit-id="${visit.id}" data-visit-date="${visit.visitDate}" title="ลบการติดตาม"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                    ${visit.actualPEFR ? `<div class="mb-3 text-sm"><p class="font-semibold text-gray-600">PEFR: ${visit.actualPEFR} L/min (${visit.percentPredictedPEFR || 'N/A'}%)</p></div>` : ''}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                        <div><p class="font-semibold text-gray-600">เทคนิคการใช้ยา: ${getTechniqueIcon(visit.inhalerTechnique)} ${visit.inhalerTechnique}</p>${visit.techniqueNotes ? `<p class="text-gray-500 pl-4">- ${visit.techniqueNotes}</p>` : ''}</div>
+                        <div><p class="font-semibold text-gray-600">Adherence: ${visit.adherence}</p></div>
+                        <div class="col-span-1 md:col-span-2"><p class="font-semibold text-gray-600">รายการยา: ${visit.isIcsPrescribed ? '<i class="fas fa-prescription-bottle-alt text-teal-500" title="มีการสั่งใช้ ICS"></i>' : ''}</p><pre class="bg-gray-50 p-2 rounded-md text-gray-700 whitespace-pre-wrap font-sans">${visit.medications || 'ไม่มีข้อมูล'}</pre></div>
+                        <div class="col-span-1 md:col-span-2"><p class="font-semibold text-gray-600">อาการไม่พึงประสงค์:</p><p class="text-gray-700">${visit.sideEffects || 'ไม่มี'}</p></div>
+                        <div class="col-span-1 md:col-span-2"><p class="font-semibold text-gray-600">ประเด็นที่ให้คำแนะนำ:</p><p class="text-gray-700">${visit.counselingNotes || 'ไม่มี'}</p></div>
+                    </div>
+                </div>`).join('');
+        }
+        
+        function renderPefrChart(visits, patientData) {
+            const chartCanvas = document.getElementById('pefrChart');
+            if (!chartCanvas) return;
+            
+            if (pefrChartInstance) {
+                pefrChartInstance.destroy();
+            }
+
+            const ctx = chartCanvas.getContext('2d');
+            
+            const pefrVisits = visits
+                .filter(v => v.actualPEFR)
+                .sort((a, b) => new Date(a.visitDate) - new Date(b.visitDate));
+
+            if (pefrVisits.length === 0) {
+                 const container = chartCanvas.parentElement.parentElement;
+                 container.innerHTML = '<h3 class="text-xl font-bold mb-4 text-gray-700">แนวโน้มค่า PEFR</h3><div class="h-64 flex items-center justify-center"><p class="text-center text-gray-500 py-8">ไม่มีข้อมูล PEFR สำหรับแสดงผลกราฟ</p></div>';
+                 return;
+            }
+
+            const labels = pefrVisits.map(v => new Date(v.visitDate).toLocaleDateString('th-TH'));
+            const actualData = pefrVisits.map(v => v.actualPEFR);
+            const predictedPefr = calculatePredictedPEFR(patientData);
+            const predictedData = predictedPefr ? pefrVisits.map(() => predictedPefr) : [];
+
+            pefrChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'PEFR ที่วัดได้ (L/min)',
+                            data: actualData,
+                            borderColor: 'rgb(59, 130, 246)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                            tension: 0.1,
+                            fill: false,
+                        },
+                        {
+                            label: 'PEFR มาตรฐาน (Predicted)',
+                            data: predictedData,
+                            borderColor: 'rgb(156, 163, 175)',
+                            borderDash: [5, 5],
+                            fill: false,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' }, title: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function calculatePredictedPEFR(patient) {
+            if (!patient?.height || !patient?.birthDate || !patient?.gender) return null;
+
+            const H = Math.round(patient.height);
+            const A = calculateAge(patient.birthDate);
+            if (A === null) return null;
+            
+            const gender = patient.gender;
+
+            if (A < 15) {
+                const childPefr = pefrData.children[H];
+                if (childPefr) return childPefr;
+                return Math.round(-425.5714 + (5.2428 * H));
+            }
+
+            const roundedHeight = Math.round(H / 2) * 2;
+            const genderData = gender === 'ชาย' ? pefrData.male : pefrData.female;
+
+            if (genderData && genderData[A] && genderData[A][roundedHeight]) {
+                return genderData[A][roundedHeight];
+            }
+
+            let pefr = (gender === 'ชาย') ? (6.14 * H) - (0.043 * A) - 499 : (3.76 * H) - (0.026 * A) - 201;
+            return pefr > 0 ? Math.round(pefr) : null;
+        }
+        
+        function calculateAndDisplayEacScore() {
+            let totalScore = 0;
+            const eacQuestionsContainer = document.getElementById('eacQuestionsContainer');
+            if (!eacQuestionsContainer) return;
+            
+            eacQuestionsContainer.querySelectorAll('.eac-question').forEach(q => {
+                totalScore += Number(q.value) || 0;
+            });
+            eacQuestionsContainer.querySelectorAll('.eac-event-question').forEach(q => {
+                if (q.value === '1') {
+                    const timesInput = document.getElementById(q.dataset.timesInput);
+                    totalScore += Number(timesInput.value) || 0;
+                }
+            });
+            
+            const scoreDisplay = document.getElementById('eacScoreDisplay');
+            const interpretationDisplay = document.getElementById('eacInterpretationDisplay');
+            
+            if (scoreDisplay) scoreDisplay.textContent = totalScore;
+            
+            if(interpretationDisplay) {
+                let interpretation = '';
+                let interpretationColor = '';
+                if (totalScore === 0) {
+                    interpretation = 'ควบคุมโรคได้ดี';
+                    interpretationColor = 'text-green-700';
+                } else if (totalScore >= 1 && totalScore <= 2) {
+                    interpretation = 'ควบคุมโรคได้บางส่วน';
+                    interpretationColor = 'text-yellow-700';
+                } else {
+                    interpretation = 'ควบคุมโรคไม่ได้';
+                    interpretationColor = 'text-red-700';
+                }
+                interpretationDisplay.textContent = interpretation;
+                interpretationDisplay.className = `text-sm font-semibold mt-1 ${interpretationColor}`;
+            }
+        }
+
+        function openAddPatientModal() {
+            allUI.patientForm.reset();
+            allUI.patientForm.querySelector('#patientId').value = '';
+            allUI.patientModalTitle.textContent = 'เพิ่มข้อมูลผู้ป่วยใหม่';
+            allUI.patientModal.classList.remove('hidden');
+            allUI.patientModal.classList.add('flex');
+        }
+
+        function openEditPatientModal() {
+            if (!currentPatientData || !currentPatientId) return;
+            allUI.patientForm.reset();
+            allUI.patientModalTitle.textContent = 'แก้ไขข้อมูลผู้ป่วย';
+            
+            allUI.patientForm.querySelector('#patientId').value = currentPatientId;
+            allUI.patientForm.querySelector('#hn').value = currentPatientData.hn;
+            allUI.patientForm.querySelector('#name').value = currentPatientData.name;
+            allUI.patientForm.querySelector('#birthDate').value = currentPatientData.birthDate;
+            allUI.patientForm.querySelector('#height').value = currentPatientData.height;
+            allUI.patientForm.querySelector('#gender').value = currentPatientData.gender;
+            
+            allUI.patientModal.classList.remove('hidden');
+            allUI.patientModal.classList.add('flex');
+        }
+
+        function openAddVisitModal() {
+            allUI.addVisitForm.reset();
+            document.getElementById('visitId').value = '';
+            document.getElementById('visitModalTitle').textContent = 'บันทึกการติดตาม (Follow-up)';
+            document.getElementById('visitDate').valueAsDate = new Date();
+            document.getElementById('nextAppointmentDate').value = currentPatientData.nextAppointmentDate || '';
+            const predicted = calculatePredictedPEFR(currentPatientData);
+            document.getElementById('predictedPEFR').value = predicted ? `${predicted} L/min` : 'N/A';
+            calculateAndDisplayEacScore();
+            allUI.addVisitModal.classList.remove('hidden');
+            allUI.addVisitModal.classList.add('flex');
+        }
+
+        function openEditVisitModal(visitData) {
+            allUI.addVisitForm.reset();
+            document.getElementById('visitId').value = visitData.id;
+            document.getElementById('visitModalTitle').textContent = 'แก้ไขการติดตาม';
+            ['visitDate', 'controlLevel', 'adherence', 'inhalerTechnique', 'techniqueNotes', 'medications', 'sideEffects', 'counselingNotes', 'actualPEFR', 'isIcsPrescribed'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el.type === 'checkbox') {
+                    el.checked = visitData[id] || false;
+                } else {
+                    el.value = visitData[id] || '';
+                }
+            });
+            document.getElementById('nextAppointmentDate').value = currentPatientData.nextAppointmentDate || '';
+            ['eacQ1', 'eacQ2', 'eacQ3', 'eacQ4', 'eacQ5'].forEach(id => {
+                document.getElementById(id).value = visitData[id] || '0';
+            });
+            const predicted = calculatePredictedPEFR(currentPatientData);
+            document.getElementById('predictedPEFR').value = predicted ? `${predicted} L/min` : 'N/A';
+            document.getElementById('percentPredictedPEFR').value = visitData.percentPredictedPEFR ? `${visitData.percentPredictedPEFR}%` : '';
+            calculateAndDisplayEacScore();
+            allUI.addVisitModal.classList.remove('hidden');
+            allUI.addVisitModal.classList.add('flex');
+        }
+
+    function openAddUserModal() {
+        allUI.userForm.reset();
+        document.getElementById('userModalTitle').textContent = 'เพิ่มผู้ใช้งานใหม่';
+        document.getElementById('userId').value = '';
+        allUI.userModal.classList.remove('hidden');
+        allUI.userModal.classList.add('flex');
+    }
+
+    function generateActionPlan() {
+        if (!currentPatientData || allVisitsData.length === 0) {
+            showMessage("ไม่มีข้อมูล PEFR ล่าสุดสำหรับสร้าง Action Plan", true);
+            return;
+        }
+
+        // Find the best PEFR from all visits or use predicted if none
+        const bestPEFR = Math.max(...allVisitsData.map(v => v.actualPEFR || 0), calculatePredictedPEFR(currentPatientData) || 0);
+
+        if (bestPEFR === 0) {
+            showMessage("ไม่สามารถคำนวณค่า PEFR ที่ดีที่สุดได้", true);
+            return;
+        }
+
+        document.getElementById('plan-patient-name').textContent = currentPatientData.name;
+        document.getElementById('plan-patient-hn').textContent = currentPatientData.hn;
+        document.getElementById('plan-best-pefr').textContent = bestPEFR;
+
+        const greenZone = Math.round(bestPEFR * 0.8);
+        const yellowZoneUpper = greenZone - 1;
+        const yellowZoneLower = Math.round(bestPEFR * 0.5);
+        const redZone = yellowZoneLower - 1;
+
+        document.getElementById('plan-green-zone').textContent = `> ${greenZone}`;
+        document.getElementById('plan-yellow-zone').textContent = `${yellowZoneLower} - ${yellowZoneUpper}`;
+        document.getElementById('plan-red-zone').textContent = `< ${yellowZoneLower}`;
+        
+        allUI.actionPlanModal.classList.remove('hidden');
+        allUI.actionPlanModal.classList.add('flex');
+    }
+
+        async function deleteVisit(visitId) {
+            if (!db || !currentPatientId || !visitId) return;
+            try {
+                const visitDocRef = doc(db, `patients/${currentPatientId}/visits`, visitId);
+                await deleteDoc(visitDocRef);
+                showMessage("ลบประวัติการติดตามสำเร็จ");
+            } catch (error) {
+                console.error("Error deleting visit:", error);
+                showMessage("เกิดข้อผิดพลาดในการลบประวัติ", true);
+            }
+        }
+
+        async function deletePatient(patientId) {
+            if (!db || !patientId) return;
+            try {
+                const visitsRef = collection(db, `patients/${patientId}/visits`);
+                const visitsSnapshot = await getDocs(visitsRef);
+                const batch = writeBatch(db);
+                visitsSnapshot.docs.forEach(visitDoc => batch.delete(visitDoc.ref));
+                
+                const patientDocRef = doc(db, "patients", patientId);
+                batch.delete(patientDocRef);
+
+                await batch.commit();
+                showMessage("ลบผู้ป่วยและข้อมูลทั้งหมดสำเร็จ");
+
+                if (currentPatientId === patientId) {
+                    if (pefrChartInstance) pefrChartInstance.destroy();
+                    allUI.detailContent.classList.add('hidden');
+                    allUI.emptyState.classList.remove('hidden');
+                    currentPatientId = null;
+                    currentPatientData = null;
+                }
+            } catch (error) {
+                console.error("Error deleting patient:", error);
+                showMessage("เกิดข้อผิดพลาดในการลบผู้ป่วย", true);
+            }
+        }
+
+        async function deleteUser(uid, email) {
+            if (!db || !uid) return;
+            try {
+                // NOTE: Deleting a user from Firebase Auth requires Admin SDK (server-side).
+                // On the client, we can only delete their data from Firestore.
+                // The user will still exist in Auth but will lose their role and associated data.
+                await deleteDoc(doc(db, "users", uid));
+                showMessage(`ลบข้อมูลผู้ใช้ ${email.split('@')[0]} สำเร็จ`);
+            } catch (error) {
+                console.error("Error deleting user data:", error);
+                showMessage("เกิดข้อผิดพลาดในการลบข้อมูลผู้ใช้", true);
+            }
+        }
+
+        async function updateUserRole(uid, newRole) {
+            if (!db || !uid) return;
+            try {
+                const userDocRef = doc(db, "users", uid);
+                await updateDoc(userDocRef, { role: newRole });
+                showMessage("อัปเดตบทบาทผู้ใช้สำเร็จ");
+            } catch (error) {
+                console.error("Error updating user role:", error);
+                showMessage("เกิดข้อผิดพลาดในการอัปเดตบทบาท", true);
+            }
+        }
+        
+        async function renderDashboard() {
+            if (!db || !currentUser) return;
+            allUI.dashboardLoading.style.display = 'block';
+            allUI.dashboardContent.style.display = 'none';
+            
+            document.getElementById('total-patients').textContent = allPatientsData.length;
+            
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const todayString = today.toISOString().split('T')[0];
+
+            const appointmentsToday = allPatientsData.filter(p => p.nextAppointmentDate === todayString);
+            
+            const appointmentTitleEl = document.getElementById('appointment-title');
+            const appointmentInfoEl = document.getElementById('appointment-info');
+            const appointmentIconEl = document.getElementById('appointment-icon');
+
+            if (appointmentsToday.length > 0) {
+                appointmentTitleEl.textContent = 'นัดหมายวันนี้';
+                appointmentInfoEl.textContent = appointmentsToday.length;
+                appointmentInfoEl.className = 'text-4xl font-bold text-green-600';
+                appointmentIconEl.className = 'fas fa-calendar-check text-4xl text-green-500 mb-3';
+            } else {
+                const futureAppointments = allPatientsData
+                    .map(p => p.nextAppointmentDate)
+                    .filter(d => d && new Date(d) >= today)
+                    .sort();
+                
+                if (futureAppointments.length > 0) {
+                    const nextAppointmentDate = new Date(futureAppointments[0]);
+                    const nextDateCount = allPatientsData.filter(p => p.nextAppointmentDate === futureAppointments[0]).length;
+                    appointmentTitleEl.textContent = 'นัดหมายครั้งถัดไป';
+                    appointmentInfoEl.textContent = `${nextAppointmentDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })} (${nextDateCount} คน)`;
+                    appointmentInfoEl.className = 'text-3xl font-bold text-gray-800';
+                    appointmentIconEl.className = 'fas fa-calendar-alt text-4xl text-gray-500 mb-3';
+                } else {
+                    appointmentTitleEl.textContent = 'นัดหมาย';
+                    appointmentInfoEl.textContent = 'ไม่มี';
+                     appointmentInfoEl.className = 'text-4xl font-bold text-gray-400';
+                    appointmentIconEl.className = 'fas fa-calendar-times text-4xl text-gray-400 mb-3';
+                }
+            }
+
+
+            const latestVisitsPromises = allPatientsData.map(patient => {
+                const visitsRef = collection(db, `patients/${patient.id}/visits`);
+                const q = query(visitsRef, orderBy('visitDate', 'desc'), limit(1));
+                return getDocs(q);
+            });
+
+            const snapshots = await Promise.all(latestVisitsPromises);
+            const latestVisits = snapshots.map(snapshot => snapshot.empty ? null : snapshot.docs[0].data()).filter(Boolean);
+            
+            const controlCounts = { 'ควบคุมโรคได้ดี': 0, 'ควบคุมโรคได้บางส่วน': 0, 'ควบคุมโรคไม่ได้': 0 };
+            latestVisits.forEach(visit => {
+                if(visit.eacInterpretation && controlCounts.hasOwnProperty(visit.eacInterpretation)) {
+                    controlCounts[visit.eacInterpretation]++;
+                }
+            });
+
+            const icsCounts = { withIcs: 0, withoutIcs: 0 };
+            latestVisits.forEach(visit => {
+                if (visit.isIcsPrescribed) {
+                    icsCounts.withIcs++;
+                } else {
+                    icsCounts.withoutIcs++;
+                }
+            });
+
+            renderDoughnutChart('controlRateChart', 'อัตราการควบคุมโรค', Object.keys(controlCounts), Object.values(controlCounts), ['#22c55e', '#facc15', '#ef4444']);
+            renderDoughnutChart('icsRateChart', 'สัดส่วนการใช้ ICS', ['ได้รับ ICS', 'ไม่ได้รับ ICS'], Object.values(icsCounts), ['#3b82f6', '#9ca3af']);
+
+            allUI.dashboardLoading.style.display = 'none';
+            allUI.dashboardContent.style.display = 'grid';
+        }
+
+        function renderDoughnutChart(canvasId, label, labels, data, colors) {
+            const chartCanvas = document.getElementById(canvasId);
+            if (!chartCanvas) return;
+            
+            const existingChart = Chart.getChart(canvasId);
+            if (existingChart) {
+                existingChart.destroy();
+            }
+
+            new Chart(chartCanvas.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: data,
+                        backgroundColor: colors,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        }
+                    }
+                }
+            });
+        }
+        
+        function showView(viewName) {
+            allUI.patientManagementView.classList.add('hidden');
+            allUI.dashboardView.classList.add('hidden');
+            allUI.userManagementView.classList.add('hidden');
+            allUI.navPatients.classList.remove('active');
+            allUI.navDashboard.classList.remove('active');
+            if (allUI.navUsersAdmin) allUI.navUsersAdmin.classList.remove('active');
+
+            if (viewName === 'dashboard') {
+                allUI.dashboardView.classList.remove('hidden');
+                allUI.navDashboard.classList.add('active');
+                renderDashboard();
+            } else if (viewName === 'users-admin') {
+                allUI.userManagementView.classList.remove('hidden');
+                allUI.navUsersAdmin.classList.add('active');
+                listenToUsers();
+            } else {
+                allUI.patientManagementView.classList.remove('hidden');
+                allUI.navPatients.classList.add('active');
+            }
+        }
+        
+        // --- Event Listeners Setup ---
+        function setupEventListeners() {
+            document.body.addEventListener('click', handleGlobalClick);
+            allUI.authForm.addEventListener('submit', handleAuthFormSubmit);
+            allUI.logoutBtn.addEventListener('click', () => signOut(auth));
+            allUI.patientForm.addEventListener('submit', handlePatientFormSubmit);
+            allUI.userForm.addEventListener('submit', handleUserFormSubmit);
+            allUI.addVisitForm.addEventListener('submit', handleVisitFormSubmit);
+            allUI.searchInput.addEventListener('input', filterAndRenderPatients);
+            allUI.importCsvBtn.addEventListener('click', () => allUI.csvFileInput.click());
+            allUI.csvFileInput.addEventListener('change', (e) => handleCsvImport(e.target.files[0]));
+            
+            // Listener for user management actions (delegated)
+            allUI.userManagementView.addEventListener('click', (e) => {
+                const deleteBtn = e.target.closest('.delete-user-btn');
+                if (deleteBtn) {
+                    const uid = deleteBtn.dataset.uid;
+                    const email = deleteBtn.dataset.email;
+                    showConfirmModal(`ยืนยันการลบผู้ใช้ ${email.split('@')[0]}?`, () => deleteUser(uid, email));
+                }
+            });
+            allUI.userManagementView.addEventListener('change', (e) => {
+                const roleSelect = e.target.closest('.role-select');
+                if (roleSelect) {
+                    const uid = roleSelect.dataset.uid;
+                    const newRole = roleSelect.value;
+                    updateUserRole(uid, newRole);
+                }
+            });
+        }
+        
+        // --- Single Click Handler ---
+        function handleGlobalClick(e) {
+            const target = e.target;
+            const closest = (selector) => target.closest(selector);
+
+            // Navigation
+            if (closest('#nav-patients')) { e.preventDefault(); showView('patients'); }
+            if (closest('#nav-dashboard')) { e.preventDefault(); showView('dashboard'); }
+            if (closest('#nav-users-admin')) { e.preventDefault(); showView('users-admin'); }
+            if (closest('#addUserBtn')) { openAddUserModal(); }
+            if (closest('#changePasswordBtn')) {
+                const newPassword = prompt("กรุณาใส่รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร):");
+                if (newPassword && newPassword.length >= 6) {
+                    updatePassword(auth.currentUser, newPassword).then(() => {
+                        showMessage("เปลี่ยนรหัสผ่านสำเร็จ!");
+                    }).catch((error) => {
+                        console.error("Password change error:", error);
+                        showMessage("เกิดข้อผิดพลาด: " + error.message, true);
+                    });
+                } else if (newPassword) {
+                    showMessage("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร", true);
+                }
             }
 
-            patientsUnsubscribe = onSnapshot(q, (snapshot) => {
-                allPatientsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                filterAndRenderPatients();
-                if (!allUI.dashboardView.classList.contains('hidden')) {
-                    renderDashboard();
-                }
-            }, (error) => {
-                console.error("Error listening to patient collection:", error);
-                showMessage("ไม่สามารถเชื่อมต่อฐานข้อมูลผู้ป่วยได้", true);
-                allUI.patientLoading.textContent = "เกิดข้อผิดพลาดในการโหลดข้อมูล";
-            });
-        }
-        
-        function handleCsvImport(file) {
-            if (!file || !currentUser) return;
 
-            Papa.parse(file, {
-                header: true,
-                skipEmptyLines: true,
-                complete: async function(results) {
-                    if (results.errors.length > 0) {
+            // Patient List Actions
+            const patientInfo = closest('.patient-item-info');
+            if (patientInfo) {
+                const patientId = patientInfo.dataset.id;
+                document.querySelectorAll('.patient-item-container').forEach(el => el.classList.remove('bg-blue-100'));
+                patientInfo.parentElement.classList.add('bg-blue-100');
+                currentPatientId = patientId;
+                showPatientDetails(currentPatientId);
+            }
+            const deletePatientBtn = closest('.delete-patient-btn');
+            if (deletePatientBtn) {
+                e.stopPropagation();
+                const patientId = deletePatientBtn.dataset.id;
+                const patientName = deletePatientBtn.dataset.name;
+                showConfirmModal(`คุณแน่ใจหรือไม่ว่าต้องการลบผู้ป่วย "${patientName}" และข้อมูลทั้งหมด?`, () => deletePatient(patientId));
+            }
+
+            // Detail View Actions
+            if (closest('#openAddVisitModalBtn')) { openAddVisitModal(); }
+            if (closest('#openEditPatientModalBtn')) { openEditPatientModal(); }
+            if (closest('#printActionPlanBtn')) { generateActionPlan(); }
+            const editVisitBtn = closest('.edit-visit-btn');
+            if (editVisitBtn) {
+                const visitId = editVisitBtn.dataset.visitId;
+                const visitData = allVisitsData.find(v => v.id === visitId);
+                if (visitData) openEditVisitModal(visitData);
+            }
+            const deleteVisitBtn = closest('.delete-visit-btn');
+            if (deleteVisitBtn) {
+                const visitId = deleteVisitBtn.dataset.visitId;
+                const visitDate = new Date(deleteVisitBtn.dataset.visitDate).toLocaleDateString('th-TH');
+                showConfirmModal(`คุณแน่ใจหรือไม่ว่าต้องการลบการติดตามของวันที่ ${visitDate}?`, () => deleteVisit(visitId));
+            }
+            
+            // Modals & Global Actions
+            if (closest('#openAddPatientModalBtn')) { openAddPatientModal(); }
+            if (closest('#closePatientModal')) { allUI.patientModal.classList.add('hidden'); }
+            if (closest('#closeVisitModal')) { allUI.addVisitModal.classList.add('hidden'); }
+            if (closest('#closeUserModal')) { allUI.userModal.classList.add('hidden'); }
+            if (closest('#closeActionPlanModal')) { allUI.actionPlanModal.classList.add('hidden'); }
+            if (closest('#printActionPlanBtn')) { window.print(); }
+            if (closest('#confirmBtn')) { if (confirmCallback) confirmCallback(); allUI.confirmModal.classList.add('hidden'); }
+            if (closest('#cancelBtn')) { allUI.confirmModal.classList.add('hidden'); }
+        }
+
+        // --- Form Handlers ---
+        async function handleAuthFormSubmit(e) {
+            e.preventDefault();
+            const username = document.getElementById('auth-username').value;
+            const password = document.getElementById('auth-password').value;
+            let emailForAuth = `${username}@asthmaly.app`;
+
+            if (username.toLowerCase() === 'admin') {
+                emailForAuth = 'admin@system.local';
+            }
+
+            try {
+                await signInWithEmailAndPassword(auth, emailForAuth, password);
+                allUI.authError.classList.add('hidden');
+            } catch (error) {
+                console.error("Auth Error:", error.code);
+                showAuthError("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+            }
+        }
+
+        async function handlePatientFormSubmit(e) {
+            e.preventDefault();
+            if (!db || !currentUser) return showMessage("ยังไม่ได้เชื่อมต่อ", true);
+            
+            const patientId = document.getElementById('patientId').value;
+            const patientData = {
+                hn: document.getElementById('hn').value.padStart(7, '0'),
+                name: document.getElementById('name').value,
+                birthDate: document.getElementById('birthDate').value, 
+                height: Number(document.getElementById('height').value),
+                gender: document.getElementById('gender').value,
+                updatedAt: new Date(),
+                ownerId: currentUser.uid,
+                ownerEmail: currentUser.email
+            };
+
+            try {
+                if (patientId) { // Edit mode
+                    const patientDocRef = doc(db, "patients", patientId);
+                    await updateDoc(patientDocRef, patientData);
+                    showMessage("แก้ไขข้อมูลผู้ป่วยสำเร็จ!");
+                    showPatientDetails(patientId);
+                } else { // Add mode
+                    patientData.createdAt = new Date();
+                    await addDoc(collection(db, "patients"), patientData);
+                    showMessage("เพิ่มผู้ป่วยสำเร็จ!");
+                }
+                allUI.patientForm.reset();
+                allUI.patientModal.classList.add('hidden');
+            } catch (error) {
+                console.error("Error saving patient:", error);
+                showMessage("เกิดข้อผิดพลาดในการบันทึกข้อมูลผู้ป่วย", true);
+            }
+        }
+
+        async function handleVisitFormSubmit(e) {
+            e.preventDefault();
+            if (!db || !currentPatientId) return showMessage("กรุณาเลือกผู้ป่วยก่อนบันทึก", true);
+            const visitId = document.getElementById('visitId').value;
+            const visitData = {
+                visitDate: document.getElementById('visitDate').value,
+                controlLevel: document.getElementById('controlLevel').value,
+                adherence: document.getElementById('adherence').value,
+                inhalerTechnique: document.getElementById('inhalerTechnique').value,
+                techniqueNotes: document.getElementById('techniqueNotes').value,
+                medications: document.getElementById('medications').value,
+                isIcsPrescribed: document.getElementById('isIcsPrescribed').checked,
+                sideEffects: document.getElementById('sideEffects').value,
+                counselingNotes: document.getElementById('counselingNotes').value,
+                actualPEFR: document.getElementById('actualPEFR').value ? Number(document.getElementById('actualPEFR').value) : null,
+                predictedPEFR: calculatePredictedPEFR(currentPatientData),
+                percentPredictedPEFR: document.getElementById('percentPredictedPEFR').value.replace('%', '') || null,
+                eacScore: Number(document.getElementById('eacScoreDisplay').textContent) || 0,
+                eacInterpretation: document.getElementById('eacInterpretationDisplay').textContent || '',
+                eacQ1: document.getElementById('eacQ1').value, 
+                eacQ2: document.getElementById('eacQ2').value,
+                eacQ3: document.getElementById('eacQ3').value, 
+                eacQ4: document.getElementById('eacQ4').value,
+                eacQ5: document.getElementById('eacQ5').value,
+                eacQ4_times: document.getElementById('eacQ4_times').value,
+                eacQ5_times: document.getElementById('eacQ5_times').value,
+                updatedAt: new Date()
+            };
+            try {
+                const nextAppointmentDate = document.getElementById('nextAppointmentDate').value;
+                if (nextAppointmentDate) {
+                    const patientDocRef = doc(db, "patients", currentPatientId);
+                    await updateDoc(patientDocRef, { nextAppointmentDate: nextAppointmentDate });
+                }
+
+                const visitCollectionRef = collection(db, `patients/${currentPatientId}/visits`);
+                if (visitId) {
+                    await updateDoc(doc(visitCollectionRef, visitId), visitData);
+                    showMessage("แก้ไขข้อมูลสำเร็จ!");
+                } else {
+                    visitData.createdAt = new Date();
+                    await addDoc(visitCollectionRef, visitData);
+                    showMessage("บันทึกการติดตามสำเร็จ!");
+                }
+                allUI.addVisitForm.reset();
+                allUI.addVisitModal.classList.add('hidden');
+            } catch (error) {
+                console.error("Error saving visit: ", error);
+                showMessage("เกิดข้อผิดพลาดในการบันทึก", true);
+            }
+        }
+
+        async function handleUserFormSubmit(e) {
+            e.preventDefault();
+            if (currentUserRole !== 'admin') return showMessage("คุณไม่มีสิทธิ์ดำเนินการ", true);
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const role = document.getElementById('role').value;
+            const email = `${username}@asthmaly.app`;
+
+            if (!username || !password) {
+                return showMessage("กรุณากรอกชื่อผู้ใช้และรหัสผ่าน", true);
+            }
+            if (password.length < 6) {
+                return showMessage("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร", true);
+            }
+
+            try {
+                // This is a simplified user creation. A secondary auth instance is needed
+                // to create users without logging out the current admin. This is a limitation for now.
+                // For a production app, this logic should be moved to a backend function.
+                const tempApp = initializeApp(firebaseConfig, "secondary");
+                const tempAuth = getAuth(tempApp);
+
+                const userCredential = await createUserWithEmailAndPassword(tempAuth, email, password);
+                const newUser = userCredential.user;
+
+                await setDoc(doc(db, "users", newUser.uid), {
+                    email: newUser.email,
+                    role: role,
+                    createdAt: new Date()
+                });
+
+                showMessage(`สร้างผู้ใช้ ${username} สำเร็จ!`);
+                allUI.userModal.classList.add('hidden');
+                
+                // signOut from temp auth, not the main one
+                await signOut(tempAuth);
+
+            } catch (error) {
+                console.error("Error creating user:", error);
+                if (error.code === 'auth/email-already-in-use') {
+                    showMessage("ชื่อผู้ใช้นี้มีอยู่แล้ว", true);
+                } else {
+                    showMessage("เกิดข้อผิดพลาดในการสร้างผู้ใช้", true);
+                }
+            }
+        }
+        
+        // --- Initialization ---
+        async function handleUserSession(user) {
+            allUI.loadingView.style.display = 'none';
+            if (user) {
+                currentUser = user;
+                const userDocRef = doc(db, 'users', user.uid);
+                let userDoc = await getDoc(userDocRef);
+
+                if (!userDoc.exists()) {
+                    const newUserRole = user.email === 'admin@system.local' ? 'admin' : 'user';
+                    await setDoc(userDocRef, {
+                        email: user.email,
+                        role: newUserRole,
+                        createdAt: new Date()
+                    });
+                    currentUserRole = newUserRole;
+                } else {
+                    currentUserRole = userDoc.data().role || 'user';
+                }
+                
+                allUI.userDisplay.textContent = user.email.split('@')[0];
+                allUI.userRole.textContent = currentUserRole;
+                allUI.loginView.style.display = 'none';
+                allUI.mainAppView.style.display = 'block';
+                
+                if (currentUserRole === 'admin') {
+                    allUI.navUsersAdmin.classList.remove('hidden');
+                } else {
+                    allUI.navUsersAdmin.classList.add('hidden');
+                }
+
+                listenToPatients();
+            } else {
+                currentUser = null;
+                currentUserRole = 'user';
+                allUI.mainAppView.style.display = 'none';
+                allUI.loginView.style.display = 'flex';
+                if (patientsUnsubscribe) patientsUnsubscribe();
+                if (usersUnsubscribe) usersUnsubscribe();
+                allPatientsData = [];
+                renderPatientList([]);
+            }
+        }
+
+        function listenToPatients() {
+            if (patientsUnsubscribe) patientsUnsubscribe();
+            if (!currentUser) return;
+
+            let q;
+            const patientsCollectionRef = collection(db, "patients");
+
+            if (currentUserRole === 'admin') {
+                q = query(patientsCollectionRef, orderBy('name'));
+            } else {
+                q = query(patientsCollectionRef, where("ownerId", "==", currentUser.uid), orderBy('name'));
+            }
+
+            patientsUnsubscribe = onSnapshot(q, (snapshot) => {
+                allPatientsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                filterAndRenderPatients();
+                if (!allUI.dashboardView.classList.contains('hidden')) {
+                    renderDashboard();
+                }
+            }, (error) => {
+                console.error("Error listening to patient collection:", error);
+                showMessage("ไม่สามารถเชื่อมต่อฐานข้อมูลผู้ป่วยได้", true);
+                allUI.patientLoading.textContent = "เกิดข้อผิดพลาดในการโหลดข้อมูล";
+            });
+        }
+        
+        function handleCsvImport(file) {
+            if (!file || !currentUser) return;
+
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: async function(results) {
+                    if (results.errors.length > 0) {
+                        console.error("CSV Parse Errors:", results.errors);
                         return showMessage("ไฟล์ CSV มีรูปแบบไม่ถูกต้อง", true);
-                    }
-                    if (results.data.length === 0) {
-                        return showMessage("ไม่พบข้อมูลในไฟล์ CSV", true);
-                    }
+                    }
+                    if (results.data.length === 0) {
+                        return showMessage("ไม่พบข้อมูลในไฟล์ CSV", true);
+                    }
 
-                    const patientsMap = new Map();
-                    for (const row of results.data) {
-                        const hn = row.hn?.trim();
-                        if (!hn) continue;
+                    const patientsMap = new Map();
+                    for (const row of results.data) {
+                        const hn = row.hn?.trim();
+                        if (!hn) continue;
 
-                        if (!patientsMap.has(hn)) {
-                            patientsMap.set(hn, {
-                                hn: hn,
-                                name: row.name?.trim() || 'N/A',
-                                birthDate: row.birthDate?.trim() || '',
-                                gender: row.gender?.trim() || 'ชาย',
-                                height: Number(row.height) || 0,
-                                ownerId: currentUser.uid, // Assign owner
-                                ownerEmail: currentUser.email, // Assign owner email
-                                createdAt: new Date(),
-                                updatedAt: new Date(),
-                                visits: []
-                            });
+                        if (!patientsMap.has(hn)) {
+                            patientsMap.set(hn, {
+                                hn: hn,
+                                name: row.name?.trim() || 'N/A',
+                                birthDate: row.birthDate?.trim() || '',
+                                gender: row.gender?.trim() || 'ชาย',
+                                height: Number(row.height) || 0,
+                                ownerId: currentUser.uid,
+                                ownerEmail: currentUser.email,
+                                createdAt: new Date(),
+                                updatedAt: new Date(),
+                                visits: []
+                            });
+                        }
+                        
+                        if(row.visitDate?.trim()) {
+                            patientsMap.get(hn).visits.push({
+                                visitDate: row.visitDate.trim(),
+                                medications: row.medications?.trim() || '',
+                                isIcsPrescribed: ['true', 'yes', '1'].includes(row.isIcsPrescribed?.toLowerCase()),
+                                actualPEFR: row.actualPEFR ? Number(row.actualPEFR) : null,
+                                adherence: row.adherence?.trim() || 'ต้องปรับปรุง',
+                            });
                         }
-                        
-                        patientsMap.get(hn).visits.push({
-                            visitDate: row.visitDate?.trim() || new Date().toISOString().split('T')[0],
-                            medications: row.medications?.trim() || '',
-                            isIcsPrescribed: row.isIcsPrescribed?.toUpperCase() === 'TRUE',
-                            actualPEFR: row.actualPEFR ? Number(row.actualPEFR) : null,
-                            adherence: row.adherence?.trim() || 'ต้องปรับปรุง',
-                            // ... other visit fields
-                        });
-                    }
-                    
-                    if (patientsMap.size === 0) {
-                        return showMessage("ไม่พบข้อมูลผู้ป่วยที่ถูกต้องในไฟล์", true);
-                    }
+                    }
+                    
+                    if (patientsMap.size === 0) {
+                        return showMessage("ไม่พบข้อมูลผู้ป่วยที่ถูกต้องในไฟล์", true);
+                    }
 
-                    try {
-                        const batch = writeBatch(db);
-                        for (const [hn, data] of patientsMap.entries()) {
-                            const { visits, ...patientInfo } = data;
-                            const patientRef = doc(collection(db, 'patients'));
-                            batch.set(patientRef, patientInfo);
+                    try {
+                        const batch = writeBatch(db);
+                        for (const [hn, data] of patientsMap.entries()) {
+                            const { visits, ...patientInfo } = data;
+                            const patientRef = doc(collection(db, 'patients'));
+                            batch.set(patientRef, patientInfo);
 
-                            for (const visit of visits) {
-                                const visitRef = doc(collection(patientRef, 'visits'));
-                                batch.set(visitRef, visit);
-                            }
-                        }
-                        await batch.commit();
-                        showMessage(`นำเข้าข้อมูล ${patientsMap.size} ผู้ป่วยสำเร็จ!`, false);
-                    } catch (error) {
-                        console.error("Error importing data:", error);
-                        showMessage("เกิดข้อผิดพลาดในการบันทึกข้อมูล", true);
-                    } finally {
-                        allUI.csvFileInput.value = '';
-                    }
-                }
-            });
-        }
-        
-        function listenToUsers() {
-            if (currentUserRole !== 'admin') return;
-            if (usersUnsubscribe) usersUnsubscribe();
+                            for (const visit of visits) {
+                                const visitRef = doc(collection(patientRef, 'visits'));
+                                batch.set(visitRef, visit);
+                            }
+                        }
+                        await batch.commit();
+                        showMessage(`นำเข้าข้อมูล ${patientsMap.size} ผู้ป่วยสำเร็จ!`, false);
+                    } catch (error) {
+                        console.error("Error importing data:", error);
+                        showMessage("เกิดข้อผิดพลาดในการบันทึกข้อมูล", true);
+                    } finally {
+                        allUI.csvFileInput.value = '';
+                    }
+                }
+            });
+        }
+        
+        function listenToUsers() {
+            if (currentUserRole !== 'admin') return;
+            if (usersUnsubscribe) usersUnsubscribe();
 
-            const usersRef = collection(db, 'users');
-            const q = query(usersRef, orderBy('email'));
+            const usersRef = collection(db, 'users');
+            const q = query(usersRef, orderBy('email'));
 
-            const userListContainer = document.getElementById('user-list-container');
-            userListContainer.innerHTML = `<p class="p-4 text-gray-500">กำลังโหลดข้อมูลผู้ใช้...</p>`;
+            const userListContainer = document.getElementById('user-list-container');
+            userListContainer.innerHTML = `<p class="p-4 text-gray-500">กำลังโหลดข้อมูลผู้ใช้...</p>`;
 
-            usersUnsubscribe = onSnapshot(q, (snapshot) => {
-                const users = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                renderUserList(users);
-            }, (error) => {
-                console.error("Error listening to users collection:", error);
-                userListContainer.innerHTML = `<p class="p-4 text-red-500">เกิดข้อผิดพลาดในการโหลดข้อมูลผู้ใช้</p>`;
-            });
-        }
+            usersUnsubscribe = onSnapshot(q, (snapshot) => {
+                const users = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderUserList(users);
+            }, (error) => {
+                console.error("Error listening to users collection:", error);
+                userListContainer.innerHTML = `<p class="p-4 text-red-500">เกิดข้อผิดพลาดในการโหลดข้อมูลผู้ใช้</p>`;
+            });
+        }
 
-        function renderUserList(users) {
-            const userListContainer = document.getElementById('user-list-container');
-            if (!userListContainer) return;
+        function renderUserList(users) {
+            const userListContainer = document.getElementById('user-list-container');
+            if (!userListContainer) return;
 
-            const tableRows = users.map(user => {
-                const isCurrentUserAdmin = user.id === currentUser.uid;
-                const roleSelectorId = `role-${user.id}`;
-                return `
-                    <tr class="border-b">
-                        <td class="p-3">${user.email}</td>
-                        <td class="p-3">
-                            <select id="${roleSelectorId}" class="role-select p-1 border rounded-md" data-uid="${user.id}" ${isCurrentUserAdmin ? 'disabled' : ''}>
-                                <option value="user" ${user.role === 'user' ? 'selected' : ''}>User</option>
-                                <option value="moderator" ${user.role === 'moderator' ? 'selected' : ''}>Moderator</option>
-                                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
-                            </select>
-                        </td>
-                        <td class="p-3 text-center">
-                            ${!isCurrentUserAdmin ? `
-                            <button class="delete-user-btn text-red-500 hover:text-red-700" data-uid="${user.id}" data-email="${user.email}">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>` : ''}
-                        </td>
-                    </tr>
-                `;
-            }).join('');
+            const tableRows = users.map(user => {
+                const isCurrentUser = user.id === currentUser.uid;
+                const roleSelectorId = `role-${user.id}`;
+                return `
+                    <tr class="border-b">
+                        <td class="p-3">${user.email.split('@')[0]}</td>
+                        <td class="p-3">
+                            <select id="${roleSelectorId}" class="role-select p-1 border rounded-md" data-uid="${user.id}" ${isCurrentUser ? 'disabled' : ''}>
+                                <option value="user" ${user.role === 'user' ? 'selected' : ''}>User</option>
+                                <option value="moderator" ${user.role === 'moderator' ? 'selected' : ''}>Moderator</option>
+                                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                            </select>
+                        </td>
+                        <td class="p-3 text-center">
+                            ${!isCurrentUser ? `
+                            <button class="delete-user-btn text-red-500 hover:text-red-700" data-uid="${user.id}" data-email="${user.email}">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>` : ''}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
 
-            userListContainer.innerHTML = `
-                <table class="w-full text-left">
-                    <thead class="bg-gray-100">
-                        <tr>
-                            <th class="p-3 font-semibold">อีเมล</th>
-                            <th class="p-3 font-semibold">บทบาท</th>
-                            <th class="p-3 font-semibold text-center">ลบ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${tableRows}
-                    </tbody>
-                </table>
-            `;
-        }
+            userListContainer.innerHTML = `
+                <table class="w-full text-left">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="p-3 font-semibold">ชื่อผู้ใช้</th>
+                            <th class="p-3 font-semibold">บทบาท</th>
+                            <th class="p-3 font-semibold text-center">ลบ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRows}
+                    </tbody>
+                </table>
+            `;
+        }
 
-        function init() {
-            app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-            
-            populateUiElements();
-            setupEventListeners();
-            onAuthStateChanged(auth, handleUserSession);
-        }
+        function init() {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            
+            populateUiElements();
+            setupEventListeners();
+            onAuthStateChanged(auth, handleUserSession);
+        }
 
-        window.onload = init;
-    </script>
+        window.onload = init;
+    </script>
 </body>
 </html>
+
